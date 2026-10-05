@@ -10,7 +10,6 @@ export type MailboxAccessLevel = {
 	isOwner: boolean;
 	canRead: boolean;
 	canSendAs: boolean;
-	canSendOnBehalf: boolean;
 	canManage: boolean;
 };
 

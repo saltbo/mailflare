@@ -17,6 +17,7 @@ await build({ stdin: { contents: `
  export * from "./src/lib/auth/config.ts";
  export * from "./src/lib/mailboxes/create.ts";
  export * from "./src/lib/mailboxes/access.ts";
+ export { getAuthorizedSenderAddress } from "./src/lib/email/sender.ts";
  export * from "./src/lib/backups/export.ts";
  export * from "./src/lib/migrations/service.ts";
  export { mailboxSchema } from "./src/lib/validators.ts";
@@ -213,4 +214,19 @@ test("identity-only ID Tokens load profile from UserInfo, which must belong to t
  const mismatched = await attempt(env, "bob", "bob@id.test", {}, false, { sub: "alice" });
  await assert.rejects(api.finishOidcLogin(env, mismatched.callback, mismatched.attemptToken));
  assert.equal(env.DB.db.prepare("SELECT count(*) AS n FROM users").get().n, 1);
+});
+
+test("personal mailbox owners may send as their address while other users and operators are rejected", async (t) => {
+ const env = await fixture(t);
+ for (const id of ["alice", "bob", "operator"]) env.DB.db.prepare("INSERT INTO users(id,email,name,oidc_issuer,oidc_subject,created_at) VALUES(?,?,?,?,?,1)").run(id, id + "@identity.test", id, issuer, id);
+ env.DB.db.prepare("INSERT INTO domains(id,user_id,hostname,zone_id,status,receiving_provider,created_at) VALUES('domain','operator','tftt.cc','manual','active','none',1)").run();
+ const created = await api.createPersonalMailbox(env, "alice", { domainId: "domain", localPart: "alice", displayName: "Alice Mail" });
+ assert.equal(created.status, 201);
+ const mailboxId = created.body.id;
+ const sender = await api.getAuthorizedSenderAddress(env, { userId: "alice", mailboxId, from: "alice@tftt.cc" });
+ assert.deepEqual(sender, { fromAddr: '"Alice Mail" <alice@tftt.cc>', mailboxId });
+ for (const userId of ["bob", "operator"]) await assert.rejects(api.getAuthorizedSenderAddress(env, { userId, mailboxId, from: "alice@tftt.cc" }), /You do not have permission to send from this mailbox/);
+ await assert.rejects(api.getAuthorizedSenderAddress(env, { userId: "alice", mailboxId, from: "bob@tftt.cc" }), /Sender address does not match/);
+ env.DB.db.prepare("UPDATE mailboxes SET disabled = 1 WHERE id = ?").run(mailboxId);
+ await assert.rejects(api.getAuthorizedSenderAddress(env, { userId: "alice", mailboxId, from: "alice@tftt.cc" }), /You do not have permission/);
 });

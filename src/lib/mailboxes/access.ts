@@ -57,5 +57,5 @@ export async function listAccessibleMailboxIds(db: AppDatabase, user: Pick<Sessi
 }
 
 function buildAccess(mailbox: MailboxAccessLevel["mailbox"]): MailboxAccessLevel {
- return { mailbox, permission: "full_access", isOwner: true, canRead: true, canSendAs: true, canSendOnBehalf: false, canManage: true };
+ return { mailbox, permission: "full_access", isOwner: true, canRead: true, canSendAs: true, canManage: true };
 }

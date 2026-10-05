@@ -40,7 +40,7 @@ export async function getAuthorizedSenderAddress(
 	if (!actor || actor.disabled) throw new Error("Sender account not found");
 
 	const access = await getMailboxAccessLevel(db, actor, mailbox.id);
-	if (!access?.canSendOnBehalf) {
+	if (!access?.canSendAs) {
 		throw new Error("You do not have permission to send from this mailbox");
 	}
 
@@ -54,16 +54,8 @@ export async function getAuthorizedSenderAddress(
 	// sends under its own.
 	const senderName = resolveMailboxDisplayName(mailbox, mailbox.ownerEmail, mailbox.ownerName);
 
-	if (access.canSendAs) {
-		return {
-			fromAddr: formatEmailAddress(senderAddress, senderName),
-			mailboxId: mailbox.id,
-		};
-	}
-
-	const mailboxName = senderName || senderAddress;
 	return {
-		fromAddr: formatEmailAddress(senderAddress, `${actor.name} on behalf of ${mailboxName}`),
+		fromAddr: formatEmailAddress(senderAddress, senderName),
 		mailboxId: mailbox.id,
 	};
 }
