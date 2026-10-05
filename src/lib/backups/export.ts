@@ -2,7 +2,7 @@ import type { BackupTableGroupId, DatabaseBackupDocument, DatabaseBackupTable, D
 import { mergeLegacyMessageBodies } from "./utils";
 import { BACKUP_TABLE_GROUPS, getSelectedBackupTables } from "./table-groups";
 
-/** Includes retired tables solely to export pre-migration databases and recognize old full backups. */
+/** Includes retired authentication, API-key, license and assistant tables solely to export pre-migration databases and recognize old full backups. */
 const BACKUP_TABLES: DatabaseBackupTable[] = ["users", "domains", "mailboxes", "mailbox_access", "contacts", "folders", "api_keys", "api_key_mailboxes", "messages", "message_attachments", "shared_attachment_links", "outbound_jobs", "routing_rules", "webhooks", "webhook_deliveries", "sessions", "audit_logs", "backup_settings", "backups", "app_settings", "license_settings", "email_templates", "calendar_events", "booking_events", "auto_reply_deliveries", "spam_token_stats", "spam_reputation", "spam_feedback", "mailbox_aliases", "password_reset_tokens", "mfa_recovery_codes", "login_challenges", "mailbox_agent_settings", "agent_conversations", "agent_chat_messages", "agent_jobs", "agent_draft_metadata", "agent_send_approvals", "mcp_key_mailboxes", 'ai_usage'];
 /**
  * Tables every backup document must contain. Tables added to BACKUP_TABLES
@@ -28,7 +28,7 @@ const INTERNAL_TABLES = [
 	"d1_migrations",
 	// Short-lived OIDC login attempts must not survive backup/restore.
 	"oidc_attempts",
-	// JMAP state counters, also derived: the jmap_messages_* triggers on
+	// Realtime mailbox revision counters, also derived: the jmap_messages_* triggers on
 	// `messages` insert and bump a row per mailbox as messages are restored.
 	// Exporting it would make restore fail, since the triggers recreate these
 	// primary keys before the table's own rows would be inserted.

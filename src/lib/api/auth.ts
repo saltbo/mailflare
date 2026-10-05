@@ -1,20 +1,6 @@
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/cookies";
-import { authenticateApiKeyValue, hasScope } from "@/lib/api/key-auth";
-import type { ApiAuthResult } from "@/lib/api/key-auth-types";
-
-export type { ApiAuthResult };
-
-export async function authenticateApiKey(
-	env: CloudflareEnv,
-	authorization: string | null,
-): Promise<ApiAuthResult | null> {
-	if (!authorization?.startsWith("Bearer ")) return null;
-	return authenticateApiKeyValue(env, authorization.slice(7));
-}
-
-export const requireScope = hasScope;
 
 /**
  * Session auth for route handlers. `requireUser` throws a bare Error, which Next turns into

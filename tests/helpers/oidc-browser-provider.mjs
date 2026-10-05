@@ -2,6 +2,7 @@
 import { createServer } from "node:http";
 import { generateKeyPairSync, sign, createHash } from "node:crypto";
 const issuer = "http://127.0.0.1:4433/issuer";
+const appOrigin = process.env.TEST_APP_ORIGIN ?? "http://127.0.0.1:3007";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: "jwk" }), kid: "local", alg: "RS256", use: "sig" };
 const codes = new Map();
@@ -16,7 +17,7 @@ createServer(async (request, response) => {
  if (url.pathname === "/issuer/authorize") {
   const code = crypto.randomUUID();
   codes.set(code, { nonce: url.searchParams.get("nonce"), challenge: url.searchParams.get("code_challenge") });
-  const callback = new URL("http://127.0.0.1:3007/api/auth/callback");
+  const callback = new URL("/api/auth/callback", appOrigin);
   callback.searchParams.set("state", url.searchParams.get("state")); callback.searchParams.set("code", code);
   response.writeHead(302, { Location: callback.href }); response.end(); return;
  }

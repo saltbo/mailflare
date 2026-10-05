@@ -128,60 +128,6 @@ export const routingRuleSchema = z.object({
 	priority: z.number().int().default(0),
 });
 
-export const domainRoutingRuleSchema = z
-	.object({
-		domainId: z.string().min(1),
-		name: z.string().trim().max(120).optional(),
-		enabled: z.boolean().default(true),
-		matchField: z.enum(["recipient", "sender", "title", "content"]).default("recipient"),
-		matchOperator: z.enum(["contains", "exact", "starts_with", "ends_with", "regex"]).default("contains"),
-		matchValue: z.string().trim().min(1).max(500),
-		action: z.enum(["store", "forward", "reject"]),
-		mailboxId: z.string().min(1).nullish(),
-		// The rule dialog submits forwardTo for every action, so blank means "not forwarding".
-		forwardTo: z.preprocess(
-			(value) => (typeof value === "string" ? value.trim() || null : value),
-			z.string().email().nullish(),
-		),
-		keepCopy: z.boolean().default(false),
-		rejectReason: z.string().trim().max(200).nullish(),
-		priority: z.number().int().min(0).max(1000).default(0),
-	})
-	.superRefine((value, ctx) => {
-		if (value.action === "store" && !value.mailboxId) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["mailboxId"],
-				message: "Choose the mailbox that should receive matching mail",
-			});
-		}
-		if (value.action === "forward" && !value.forwardTo) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["forwardTo"],
-				message: "A forwarding destination is required",
-			});
-		}
-		if (value.action === "forward" && value.keepCopy && !value.mailboxId) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["mailboxId"],
-				message: "Keeping a copy requires a destination mailbox",
-			});
-		}
-		if (value.matchOperator === "regex") {
-			try {
-				new RegExp(value.matchValue);
-			} catch {
-				ctx.addIssue({
-					code: "custom",
-					path: ["matchValue"],
-					message: "Enter a valid regular expression",
-				});
-			}
-		}
-	});
-
 export const webhookSchema = z.object({
 	url: z.string().url().max(2048),
 	description: z.string().trim().max(200).optional(),

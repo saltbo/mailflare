@@ -1,3 +1,4 @@
+// Retired table names below are compatibility entries for old full backups, not active product features.
 import type { BackupTableGroupId, DatabaseBackupTable } from "./types";
 
 export const BACKUP_TABLE_GROUPS: { id: BackupTableGroupId; label: string; tables: DatabaseBackupTable[] }[] = [

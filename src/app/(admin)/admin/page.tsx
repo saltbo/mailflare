@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeDollarSign, Bot, Globe2, Palette } from "lucide-react";
+import { Globe2, Palette } from "lucide-react";
 import { AdminUpdateCard } from "@/components/admin-update-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -10,7 +10,7 @@ type AdminSection = {
 	href: string;
 	title: string;
 	description: string;
-	icon: typeof Bot;
+	icon: typeof Globe2;
 };
 
 const sections: AdminSection[] = [
@@ -25,12 +25,6 @@ const sections: AdminSection[] = [
 		title: "Branding",
 		description: "Customize the app name, icon, and favicon.",
 		icon: Palette,
-	},
-	{
-		href: "/licenses",
-		title: "Licenses",
-		description: "Compare Pro and Team one-time licenses.",
-		icon: BadgeDollarSign,
 	},
 	// {
 	// 	href: "/webhooks",

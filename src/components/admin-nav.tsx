@@ -1,6 +1,6 @@
 "use client";
 
-import { DatabaseBackup, Globe2, Activity, Settings, Palette, BadgeDollarSign, Route, Webhook,  } from "lucide-react";
+import { DatabaseBackup, Globe2, Activity, Settings, Palette, Webhook,  } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavItem } from "./components-nav";
 import { NavSectionHeader, useSectionOpen } from "./nav-section-header";
@@ -9,7 +9,6 @@ import { SidebarHeader } from "./sidebar-header";
 import { SidebarScaffold } from "./sidebar-scaffold";
 import { useSidebar } from "./sidebar-state";
 
-type AdminLinkPermission = "primary" | "domains" | "users";
 
 type AdminNavLink = {
   href: string;
@@ -26,7 +25,6 @@ const sections: { label?: string; links: AdminNavLink[] }[] = [
     label: "Email",
     links: [
       { href: "/domains", label: "Domains", icon: Globe2 },
-      { href: "/routing", label: "Routing", icon: Route },
       { href: "/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },
@@ -42,7 +40,6 @@ const sections: { label?: string; links: AdminNavLink[] }[] = [
     label: "Product",
     links: [
       { href: "/branding", label: "Branding", icon: Palette },
-      { href: "/licenses", label: "Licenses", icon: BadgeDollarSign },
     ],
   },
 ];

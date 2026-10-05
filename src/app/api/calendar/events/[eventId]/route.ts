@@ -11,11 +11,11 @@ import { normalizeCalendarColor } from "@/lib/calendar/colors";
 import { DEFAULT_REPEAT_DAYS, normalizeCalendarRepeat, normalizeCalendarRepeatDays, parseCalendarOccurrenceId, parseCalendarRepeatDays, parseExcludedOccurrences } from "@/lib/calendar/recurrence";
 import { newId } from "@/lib/ids";
 import { getRequestTimeZone, normalizeTimeZone } from "@/lib/time/utils";
-import { authorizeCalendarRequest, calendarKeyCanSendInvitations } from "@/lib/calendar/api-auth";
+import { authorizeCalendarRequest } from "@/lib/calendar/api-auth";
 
 export async function PATCH(request: Request, { params }: CalendarEventRouteParams) {
 	const env = getEnv();
-	const { user, key, error } = await authorizeCalendarRequest(env, request, "calendar:write");
+	const { user, error } = await authorizeCalendarRequest(env, request);
 	if (error) return error;
 	const { eventId } = await params;
 	const occurrence = parseCalendarOccurrenceId(eventId);
@@ -32,7 +32,6 @@ export async function PATCH(request: Request, { params }: CalendarEventRoutePara
 	if (occurrence && (existing.repeat === "none" || occurrence.startsAt < existing.startsAt || (existing.repeatUntil && occurrence.startsAt >= existing.repeatUntil))) return NextResponse.json({ error: "Occurrence not found" }, { status: 404 });
 	if (existing.repeat !== "none" && effectiveFrom && existing.repeatUntil && effectiveFrom >= existing.repeatUntil) return NextResponse.json({ error: "No future occurrences remain" }, { status: 404 });
 	const attendees = (input.attendees ?? []).map((email) => email.trim()).filter((email) => /^\S+@\S+\.\S+$/.test(email));
-	if (attendees.length && existing.mailboxId && input.from && !calendarKeyCanSendInvitations(key, existing.mailboxId)) return NextResponse.json({ error: "Sending invitations requires mail send permission for this mailbox" }, { status: 403 });
 	if (input.moveOccurrenceToPast) {
 		if (!occurrence || existing.repeat === "none" || startsAt >= new Date()) return NextResponse.json({ error: "Choose a past time for this occurrence" }, { status: 400 });
 		const excluded = parseExcludedOccurrences(existing.excludedOccurrences);
@@ -63,7 +62,7 @@ export async function PATCH(request: Request, { params }: CalendarEventRoutePara
 
 export async function DELETE(request: Request, { params }: CalendarEventRouteParams) {
 	const env = getEnv();
-	const { user, error } = await authorizeCalendarRequest(env, request, "calendar:write");
+	const { user, error } = await authorizeCalendarRequest(env, request);
 	if (error) return error;
 	const { eventId } = await params;
 	const occurrence = parseCalendarOccurrenceId(eventId);

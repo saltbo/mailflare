@@ -10,7 +10,7 @@ Deferred by the user; not part of the current sign-in and product simplification
 - Validate Realmroot `at+jwt` access tokens, issuer, audience, expiry, scopes, client and controlling subject, preserving the distinct Agent actor and `sub_profile: ai_agent` in audit.
 - Require per-request DPoP proof and key binding without Bearer fallback on the Agent API; prevent replay.
 - Register through the Agent's Realmroot identity only after conformance checks pass, then prove one real read, one safe write and denied cross-user access.
-- OIDC browser sign-in is separate from API resource-server token validation. Retain ordinary personal API keys/JMAP until their replacement is deliberately specified.
+- OIDC browser sign-in is separate from API resource-server token validation. API keys and JMAP are removed; design the future Agent API around Realmroot authority instead.
 
 ## Identity lifecycle
 

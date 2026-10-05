@@ -4,11 +4,9 @@ export const adminPageTitles: Record<string, string> = {
 	"/admin": "Admin settings",
 	"/mailboxes": "Mailboxes",
 	"/domains": "Domains",
-	"/routing": "Routing",
 	"/webhooks": "Webhooks",
 	"/general": "General",
 	"/activity": "Activity",
 	"/backups": "Backups",
 	"/branding": "Branding",
-	"/licenses": "Licenses",
 };

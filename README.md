@@ -31,7 +31,7 @@ Want to support the mailflare? <a target="_blank" href="https://store.paymug.co/
 - **Organization**: Keep your inbox tidy with search, folders, stars, snooze, archive, spam, and trash.
 - **Routing rules**: Store, forward, reject, or sort incoming mail automatically.
 - **Notifications**: Get live inbox updates and alerts when new mail arrives.
-- **Import, export, contacts**: Move mail in and out, manage contacts, and block unwanted senders.
+- **Contacts**: Manage contacts and block unwanted senders.
 - **Infrastructure**: Deployment-configured operators manage domains, providers, webhooks, audit logs and backups.
 
 ## How it works
@@ -64,7 +64,7 @@ You choose the provider per domain and can switch anytime (see [Sending and rece
 
 1. **Deploy the app.** Click **Deploy to Cloudflare**. Keep the app name `mailflare`. Other Worker names will break the app.
 2. **Configure Realmroot.** Follow [Realmroot sign-in](docs/realmroot.md). Set the confidential client and exact callback URL, app origin, and operator subjects. Use an empty database for this edition.
-3. **Connect a domain.** Add a domain from the same Cloudflare account and choose which service receives its mail. Mailflare sets up Email Routing, or guides you through Resend or Amazon SES. Users sign in and create their own personal mailboxes. Add Resend or AWS credentials on the domain page when you need them.
+3. **Connect a domain.** Add a domain from the same Cloudflare account and choose which service receives its mail. Mailflare sets up Email Routing, or guides you through Resend or Amazon SES. Users sign in and create one personal mailbox each. Add Resend or AWS credentials on the domain page when you need them.
 
 ⚠️ **`CF_TOKEN` is required during deployment.** Create a scoped [Cloudflare API token with these permissions](https://github.com/hieunc229/mailflare/issues/24#issuecomment-5523686105) for the domains you want to connect:
 
@@ -131,7 +131,7 @@ The Cloudflare app uses vinext and the Cloudflare Vite plugin, with local D1, R2
 
 The Node/Docker runtime still uses Next.js with `build:node`, `start:node`, and `dev:node`.
 
-This edition removes local password/MFA authentication, in-app role management, shared mailboxes, AI and MCP. Realmroot owns identity; Mailflare keeps only business-user mapping, application sessions and per-user data ownership.
+This edition removes local password/MFA authentication, in-app role management, shared mailboxes, AI, MCP, licenses, API keys/JMAP, custom domain routing and mail import/export. Realmroot owns identity; Mailflare keeps only business-user mapping, application sessions and per-user data ownership.
 
 See [Realmroot setup](docs/realmroot.md) and [deferred Resource Server work](docs/TODO.md).
 

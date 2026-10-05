@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
 import { FloatingComposer } from "@/components/compose/floating-composer";
-import { LicenseIndicator } from "@/components/license-indicator";
 import { MailSearchProvider } from "@/components/mail-search/mail-search-context";
 import { MailboxProvider } from "@/components/mailbox-provider";
 import { MailboxSelector } from "@/components/mailbox-selector";
@@ -41,7 +40,7 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
                       </nav>
                       <div id="calendar-header-slot" className="flex min-w-0 flex-1 items-center md:min-w-max max-md:order-last max-md:basis-full max-md:pl-3 max-md:empty:hidden" />
                     </div>
-                    <LicenseIndicator />
+
                     <MailboxSelector />
                   </header>
                   <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">

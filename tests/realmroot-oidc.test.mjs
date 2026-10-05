@@ -23,6 +23,8 @@ await build({ stdin: { contents: `
  export { mailboxSchema } from "./src/lib/validators.ts";
  export { getDb } from "./src/db/index.ts";
  export { openSqliteDatabase } from "./server/runtime/sqlite-database.ts";
+ export { getBranding, updateBranding } from "./src/lib/branding/service.ts";
+ export { resolveInboundAddress } from "./src/lib/email/routing.ts";
  export { RealtimeHubRegistry } from "./server/runtime/realtime.ts";
  `, resolveDir: root, sourcefile: "acceptance-entry.ts" }, outfile: join(out, "entry.mjs"), bundle: true, platform: "node", format: "esm", packages: "external", tsconfig: join(root, "tsconfig.json"), logLevel: "silent" });
 // External dependencies resolve from the project rather than the temporary output directory.
@@ -72,7 +74,7 @@ async function fixture(t, beforeLast = false) {
  const env = { DB, APP_URL: "http://127.0.0.1:3000", OIDC_ISSUER: issuer, OIDC_CLIENT_ID: "mailflare", OIDC_CLIENT_SECRET: "test-secret", OIDC_OPERATOR_SUBJECTS: "operator", MAILBOX_DOMAIN: "tftt.cc", MAILFLARE_RUNTIME: "node" };
  if (beforeLast) {
   const bundle = JSON.parse(readFileSync(join(root, "src/lib/migrations/bundle.json"), "utf8"));
-  for (const migration of bundle.migrations.slice(0, -1)) for (const statement of migration.statements) DB.db.exec(statement);
+  for (const migration of bundle.migrations.filter((migration) => migration.name < (beforeLast === "before-feature-removal" ? "0054_remove_licenses_keys_domain_routing.sql" : "0053_realmroot_personal_mailboxes.sql"))) for (const statement of migration.statements) DB.db.exec(statement);
  } else await api.applyPendingMigrations(DB);
  return env;
 }
@@ -163,7 +165,9 @@ test("fresh migrations remove credentials and AI tables; backups cover both side
  await api.restoreDatabaseRecords(env.DB, oldBackup.buffer);
  const backup = await api.exportDatabaseRecords(env.DB);
  const tables = await api.assertBackupTablesCoverDatabase(env.DB);
- assert.ok(tables.has("api_key_mailboxes"));
+ assert.ok(!tables.has("api_key_mailboxes"));
+ assert.ok(!tables.has("api_keys"));
+ assert.ok(!tables.has("license_settings"));
  assert.ok(!tables.has("agent_conversations"));
  assert.ok(!tables.has("mailbox_access"));
  assert.ok(!tables.has("oidc_attempts"));
@@ -178,7 +182,7 @@ test("migration refuses to erase an existing installation", async (t) => {
  const env = await fixture(t, true);
  env.DB.db.prepare("INSERT INTO users(id,email,password_hash,name,created_at) VALUES('old','old@example.test','hash','Old',1)").run();
  const bundle = JSON.parse(readFileSync(join(root, "src/lib/migrations/bundle.json"), "utf8"));
- assert.throws(() => env.DB.db.exec(bundle.migrations.at(-1).statements.join("\n")), /CHECK constraint/);
+ assert.throws(() => env.DB.db.exec(bundle.migrations.find((migration) => migration.name === "0053_realmroot_personal_mailboxes.sql").statements.join("\n")), /CHECK constraint/);
  assert.equal(env.DB.db.prepare("SELECT id FROM users").get().id, "old");
 });
 
@@ -229,4 +233,58 @@ test("personal mailbox owners may send as their address while other users and op
  await assert.rejects(api.getAuthorizedSenderAddress(env, { userId: "alice", mailboxId, from: "bob@tftt.cc" }), /Sender address does not match/);
  env.DB.db.prepare("UPDATE mailboxes SET disabled = 1 WHERE id = ?").run(mailboxId);
  await assert.rejects(api.getAuthorizedSenderAddress(env, { userId: "alice", mailboxId, from: "alice@tftt.cc" }), /You do not have permission/);
+});
+
+test("mailbox creation rejects a second mailbox and concurrent requests reserve only one", async (t) => {
+ const env = await fixture(t);
+ env.DB.db.prepare("INSERT INTO users(id,email,name,created_at) VALUES('alice','alice@id.test','Alice',1)").run();
+ env.DB.db.prepare("INSERT INTO domains(id,user_id,hostname,zone_id,status,receiving_provider,created_at) VALUES('domain','alice','tftt.cc','manual','active','none',1)").run();
+ const results = await Promise.all(["one", "two"].map((localPart) => api.createPersonalMailbox(env, "alice", { domainId: "domain", localPart })));
+ assert.deepEqual(results.map((r) => r.status).sort(), [201, 409]);
+ assert.equal(env.DB.db.prepare("SELECT count(*) AS n FROM mailboxes WHERE user_id='alice'").get().n, 1);
+ assert.equal((await api.createPersonalMailbox(env, "alice", { domainId: "domain", localPart: "three" })).body.error, "You already have a mailbox.");
+});
+
+test("branding name and icon work without a license and survive backup/restore", async (t) => {
+ const env = await fixture(t);
+ const objects = new Map();
+ env.BUCKET = { put: async (key, body, options) => objects.set(key, { body, options }) };
+ assert.ok(!env.DB.db.prepare("SELECT name FROM sqlite_master WHERE name='license_settings'").get());
+ const icon = new File([new Uint8Array([1,2,3])], "icon.png", { type: "image/png" });
+ const branding = await api.updateBranding(env, { appName: "tmail", icon });
+ assert.equal(branding.appName, "tmail"); assert.equal(branding.hasCustomIcon, true);
+ assert.equal(objects.get("branding/app-icon").options.httpMetadata.contentType, "image/png");
+ const backup = await api.exportDatabaseRecords(env.DB);
+ await api.restoreDatabaseRecords(env.DB, backup.buffer);
+ assert.equal((await api.getBranding(env)).appName, "tmail");
+});
+
+test("removed domain rules cannot reject a real mailbox or route an unowned catch-all", async (t) => {
+ const env = await fixture(t);
+ env.DB.db.prepare("INSERT INTO users(id,email,name,created_at) VALUES('alice','alice@id.test','Alice',1)").run();
+ env.DB.db.prepare("INSERT INTO domains(id,user_id,hostname,zone_id,status,receiving_provider,created_at) VALUES('domain','alice','tftt.cc','manual','active','none',1)").run();
+ const mailbox = await api.createPersonalMailbox(env, "alice", { domainId: "domain", localPart: "alice" });
+ env.DB.db.prepare("INSERT INTO routing_rules(id,user_id,domain_id,scope,pattern,action,mailbox_id,created_at) VALUES('legacy','alice','domain','domain','*','reject',?,1)").run(mailbox.body.id);
+ assert.equal((await api.resolveInboundAddress(api.getDb(env), "alice@tftt.cc")).mailbox.mailboxId, mailbox.body.id);
+ assert.equal(await api.resolveInboundAddress(api.getDb(env), "unknown@tftt.cc"), null);
+});
+
+test("feature removal preserves users and mail and restores a pre-removal full backup", async (t) => {
+ const env = await fixture(t, "before-feature-removal");
+ env.DB.db.prepare("INSERT INTO users(id,email,name,oidc_issuer,oidc_subject,created_at) VALUES('alice','alice@identity.test','Alice',?,'alice',1)").run(issuer);
+ env.DB.db.prepare("INSERT INTO domains(id,user_id,hostname,zone_id,status,receiving_provider,created_at) VALUES('domain','alice','tftt.cc','manual','active','none',1)").run();
+ const mailbox = await api.createPersonalMailbox(env, "alice", { domainId: "domain", localPart: "alice" });
+ env.DB.db.prepare("INSERT INTO messages(id,user_id,mailbox_id,direction,from_addr,to_addr,subject,status,created_at) VALUES('message','alice',?,'inbound','from@example.test','alice@tftt.cc','Keep this mail','received',1)").run(mailbox.body.id);
+ env.DB.db.prepare("INSERT INTO api_keys(id,user_id,name,prefix,key_hash,scopes,created_at) VALUES('key','alice','Old key','ep_test','hash','[]',1)").run();
+ env.DB.db.prepare("INSERT INTO license_settings(id,instance_id,updated_at) VALUES('default','old-instance',1)").run();
+ const backup = await api.exportDatabaseRecords(env.DB);
+ const migration = JSON.parse(readFileSync(join(root, "src/lib/migrations/bundle.json"), "utf8")).migrations.find((item) => item.name === "0054_remove_licenses_keys_domain_routing.sql");
+ await env.DB.batch(migration.statements.map((statement) => env.DB.prepare(statement)));
+ assert.equal(env.DB.db.prepare("SELECT subject FROM messages WHERE id='message'").get().subject, "Keep this mail");
+ assert.ok(!env.DB.db.prepare("SELECT name FROM sqlite_master WHERE name='api_keys'").get());
+ await api.restoreDatabaseRecords(env.DB, backup.buffer);
+ assert.equal(env.DB.db.prepare("SELECT count(*) AS n FROM users").get().n, 1);
+ assert.equal(env.DB.db.prepare("SELECT count(*) AS n FROM mailboxes").get().n, 1);
+ assert.equal(env.DB.db.prepare("SELECT subject FROM messages WHERE id='message'").get().subject, "Keep this mail");
+ assert.deepEqual(env.DB.db.prepare("PRAGMA foreign_key_check").all(), []);
 });

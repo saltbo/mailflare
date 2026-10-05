@@ -318,7 +318,6 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
 							</Link>
 						)}
-                        <Link href="/mailboxes" onClick={() => setOpen(false)} className="flex items-center gap-3 px-5 py-4 text-sm font-medium">Create mailbox</Link>
 						<button
 							type="button"
 							onClick={logout}

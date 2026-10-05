@@ -15,23 +15,13 @@ export type ResolvedMailbox = {
 	displayName: string | null;
 };
 
-export type RoutingDecision = {
-	action: "store" | "forward" | "reject";
-	mailbox?: ResolvedMailbox;
-	forwardTo?: string;
-	/** Forward rules drop the message unless the rule also keeps a copy in the mailbox. */
-	keepCopy?: boolean;
-	rejectReason?: string;
-	/** Set when a domain-scope rule produced this decision, so the caller can record a match. */
-	ruleId?: string;
-};
+export type RoutingDecision = { action: "store"; mailbox: ResolvedMailbox };
 
 export type InboxRuleDestination = {
 	status: "received" | "spam" | "trash";
 	folderId: string | null;
 };
 
-type RuleRow = typeof routingRules.$inferSelect;
 
 export type RuleMatchInput = {
 	toAddress: string;
@@ -40,20 +30,10 @@ export type RuleMatchInput = {
 	content?: string | null;
 };
 
-/**
- * Resolves what should happen to an inbound message addressed to `toAddress`.
- *
- * Domain-scope rules are evaluated in three phases so that a broad catch-all can never
- * shadow a real mailbox:
- *   1. `reject` rules (block lists) — highest precedence, evaluated before delivery.
- *   2. exact mailbox, then multi-domain mailbox aliases.
- *   3. remaining `forward` / `store` rules — the catch-all fallback.
- * Within each phase rules run by descending priority, then oldest first.
- */
+/** Resolve an enabled personal mailbox by its address or alias. */
 export async function resolveInboundAddress(
 	db: AppDatabase,
 	toAddress: string,
-	fromAddress?: string | null,
 ): Promise<RoutingDecision | null> {
 	const parsed = parseRecipientAddress(toAddress);
 	if (!parsed) return null;
@@ -66,22 +46,6 @@ export async function resolveInboundAddress(
 
 	if (!domain) return null;
 
-	const domainRules = await listDomainRules(db, domain.id);
-	const matchInput: RuleMatchInput = { toAddress, fromAddress };
-
-	// Phase 1 — block rules run before any mailbox lookup so they can block a sender
-	// even when the recipient is a real mailbox.
-	for (const rule of domainRules) {
-		if (rule.action !== "reject") continue;
-		if (!matchesRule(rule, matchInput)) continue;
-		return {
-			action: "reject",
-			rejectReason: rule.rejectReason?.trim() || "Message rejected by routing rule",
-			ruleId: rule.id,
-		};
-	}
-
-	// Phase 2 — a real mailbox always wins over a catch-all.
 	const exactMailboxes = await db
 		.select()
 		.from(mailboxes)
@@ -100,67 +64,7 @@ export async function resolveInboundAddress(
 		};
 	}
 
-	// Phase 3 — catch-all and forwarding fallbacks.
-	for (const rule of domainRules) {
-		if (rule.action !== "forward" && rule.action !== "store") continue;
-		if (!matchesRule(rule, matchInput)) continue;
-
-		if (rule.action === "forward") {
-			const forwardTo = rule.forwardTo?.trim();
-			if (!forwardTo) continue;
-			const catchAll = rule.mailboxId ? await getRuleMailbox(db, rule.mailboxId, domain.id) : null;
-			return {
-				action: "forward",
-				forwardTo,
-				keepCopy: rule.keepCopy && !!catchAll,
-				mailbox: catchAll ?? undefined,
-				ruleId: rule.id,
-			};
-		}
-
-		if (!rule.mailboxId) continue;
-		const catchAll = await getRuleMailbox(db, rule.mailboxId, domain.id);
-		if (!catchAll) continue;
-		return { action: "store", mailbox: catchAll, ruleId: rule.id };
-	}
-
 	return null;
-}
-
-async function listDomainRules(db: AppDatabase, domainId: string): Promise<RuleRow[]> {
-	return db
-		.select()
-		.from(routingRules)
-		.where(
-			and(
-				eq(routingRules.domainId, domainId),
-				eq(routingRules.scope, "domain"),
-				eq(routingRules.enabled, true),
-			),
-		)
-		.orderBy(desc(routingRules.priority), asc(routingRules.createdAt));
-}
-
-async function getRuleMailbox(
-	db: AppDatabase,
-	mailboxId: string,
-	domainId: string,
-): Promise<ResolvedMailbox | null> {
-	const [mailbox] = await db
-		.select()
-		.from(mailboxes)
-		.where(and(eq(mailboxes.id, mailboxId), eq(mailboxes.disabled, false)))
-		.limit(1);
-	if (!mailbox) return null;
-
-	const [domain] = await db
-		.select({ hostname: domains.hostname })
-		.from(domains)
-		.where(eq(domains.id, domainId))
-		.limit(1);
-	if (!domain) return null;
-
-	return toResolvedMailbox(mailbox, domainId, domain.hostname);
 }
 
 function toResolvedMailbox(
@@ -177,20 +81,6 @@ function toResolvedMailbox(
 		hostname,
 		displayName: mailbox.displayName,
 	};
-}
-
-/** Records that a domain rule fired, for the "last matched" column in the routing UI. */
-export async function recordRuleMatch(db: AppDatabase, ruleId: string): Promise<void> {
-	const [rule] = await db
-		.select({ matchCount: routingRules.matchCount })
-		.from(routingRules)
-		.where(eq(routingRules.id, ruleId))
-		.limit(1);
-	if (!rule) return;
-	await db
-		.update(routingRules)
-		.set({ matchCount: rule.matchCount + 1, lastMatchedAt: new Date() })
-		.where(eq(routingRules.id, ruleId));
 }
 
 async function resolveMailboxAlias(db: AppDatabase, domainId: string, localPart: string) {

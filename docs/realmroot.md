@@ -11,7 +11,7 @@ Mailflare uses `openid-client` as a confidential OIDC web client. Passwords, reg
 - Local acceptance redirect URI: `http://127.0.0.1:3007/api/auth/callback` (also registered; the app origin must match the selected environment)
 - Client type: `confidential_web`; token endpoint authentication: `client_secret_basic`
 - Scopes: `openid profile email`; PKCE S256, state and nonce are used on every attempt.
-- `MAILBOX_DOMAIN=tftt.cc`: signed-in users create `username@tftt.cc` addresses.
+- `MAILBOX_DOMAIN=tftt.cc`: signed-in users create one `username@tftt.cc` address each.
 - `OIDC_OPERATOR_SUBJECTS`: comma-separated Realmroot subjects allowed to configure domains and infrastructure. This grants no access to another user's mailbox. There is no first-login administrator election or in-app role editor.
 
 Set `APP_URL`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_OPERATOR_SUBJECTS`, and `MAILBOX_DOMAIN`. Put the secret in a Worker secret or a protected ignored environment file, never the repository or browser. Local development uses an explicitly registered HTTP loopback origin and callback. Use separate clients/secrets for production and development when practical.
@@ -23,7 +23,7 @@ The login route initializes an empty database with committed migrations. Migrati
 1. Open `/login` and continue with Realmroot.
 2. The callback validates the signed ID Token, loads profile claims through UserInfo with a matching subject, and binds `(issuer, subject)` to a local business user. Equal or changed email claims do not link identities.
 3. A user without a mailbox opens `/mailboxes`, chooses a username, and creates a personal mailbox on an active configured domain. Login itself does not allocate an address.
-4. The address is reserved uniquely; dot/plus variants use the existing canonical recipient rules. Owner and mailbox type cannot be supplied by the caller. New mailboxes use only the selected domain.
+4. Each user can create only one mailbox. Existing users visiting `/mailboxes` redirect to `/inbox`; there is no creation menu. The address is reserved uniquely; dot/plus variants use the existing canonical recipient rules. Owner and mailbox type cannot be supplied by the caller. New mailboxes use only the selected domain.
 5. Mailbox reads, writes, attachments, sending and realtime delivery are restricted to the owner. Infrastructure operators have no mailbox override.
 
 The operator must first connect `tftt.cc` under Domains and complete the chosen receiving/sending provider setup. Until it is active, users see that no domain is available. Cloudflare-managed receiving requires the runtime `CF_TOKEN` and domain DNS/Email Routing permissions.
@@ -37,3 +37,9 @@ OIDC attempts are single-use, valid for ten minutes and bound to the initiating 
 ## Local acceptance
 
 Run `npm run db:bundle`, `npx tsc --noEmit`, `node --test tests/*.test.mjs`, and `npm run build`. `tests/realmroot-oidc.test.mjs` uses a real local HTTP OIDC provider with signed JWTs and real SQLite to exercise PKCE, state/nonce, signature/issuer/audience/expiry, identity mapping, session invalidation, mailbox ownership, schema initialization and backup compatibility. This is local protocol proof, not a claim of a live Realmroot production login. See [acceptance evidence](acceptance.md).
+
+## Capability reduction
+
+Licenses/UPGRADE, API keys and dependent JMAP/App passwords, custom domain routing, and user mail import/export have been removed. Ordinary inbox folder rules and database backups remain. Branding name, icon and favicon no longer need a paid license; modification stays restricted to the configured infrastructure operator. Existing forwarding settings are no longer license-gated.
+
+Migration 0054 removes only retired API-key/license tables and domain-scope custom rules. It preserves users and mail. Historic backup table names remain recognized for pre-migration export and old full-backup compatibility. Single-mailbox creation is an atomic SQLite reservation and does not depend on the migration already having run.

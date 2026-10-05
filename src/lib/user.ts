@@ -32,7 +32,7 @@ export async function listMailboxesForUser(env: CloudflareEnv, userId: string) {
 
 export async function userHasMailboxes(env: CloudflareEnv, userId: string): Promise<boolean> {
 	const db = getDb(env);
-	const [row] = await db.select({ id: mailboxes.id }).from(mailboxes).where(and(eq(mailboxes.userId, userId), eq(mailboxes.disabled, false))).limit(1);
+	const [row] = await db.select({ id: mailboxes.id }).from(mailboxes).where(eq(mailboxes.userId, userId)).limit(1);
 	return !!row;
 }
 

@@ -1,3 +1,4 @@
+// Includes retired tables so older full backup documents remain readable.
 export type BackupScheduleType = "daily" | "weekly" | "monthly";
 export type BackupTableGroupId = "accounts" | "mail" | "automation" | "assistant" | "system";
 

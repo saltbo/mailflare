@@ -167,23 +167,6 @@ export const jmapMailboxRevisions = sqliteTable("jmap_mailbox_revisions", {
 	revision: integer("revision").notNull().default(0),
 });
 
-export const apiKeys = sqliteTable("api_keys", {
-	id: text("id").primaryKey(),
-	kind: text("kind", { enum: ["legacy"] }).notNull().default("legacy"),
-	userId: text("user_id")
-		.notNull()
-		.references(() => users.id, { onDelete: "cascade" }),
-	name: text("name").notNull(),
-	prefix: text("prefix").notNull(),
-	keyHash: text("key_hash").notNull(),
-	scopes: text("scopes").notNull(),
-	mailboxScopeEnabled: integer("mailbox_scope_enabled", { mode: "boolean" }).notNull().default(false),
-	createdAt: integer("created_at", { mode: "timestamp" })
-		.notNull()
-		.$defaultFn(() => new Date()),
-	lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
-});
-
 export const messages = sqliteTable(
 	"messages",
 	{
@@ -563,23 +546,6 @@ export const appSettings = sqliteTable("app_settings", {
 		.$defaultFn(() => new Date()),
 });
 
-export const licenseSettings = sqliteTable("license_settings", {
-	id: text("id").primaryKey(),
-	instanceId: text("instance_id").notNull().unique(),
-	instanceUrl: text("instance_url"),
-	licenseKeyHash: text("license_key_hash"),
-	plan: text("plan", { enum: ["community", "pro", "team"] }).notNull().default("community"),
-	state: text("state", { enum: ["inactive", "active", "invalid", "expired", "deactivated"] })
-		.notNull()
-		.default("inactive"),
-	features: text("features").notNull().default("[]"),
-	activatedAt: integer("activated_at", { mode: "timestamp" }),
-	validatedAt: integer("validated_at", { mode: "timestamp" }),
-	updatedAt: integer("updated_at", { mode: "timestamp" })
-		.notNull()
-		.$defaultFn(() => new Date()),
-});
-
 export const backups = sqliteTable(
 	"backups",
 	{
@@ -606,11 +572,6 @@ export const backups = sqliteTable(
 );
 
 
-export const apiKeyMailboxes = sqliteTable("api_key_mailboxes", {
-	keyId: text("key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
-	mailboxId: text("mailbox_id").notNull().references(() => mailboxes.id, { onDelete: "cascade" }),
-}, (t) => [uniqueIndex("api_key_mailboxes_key_mailbox_idx").on(t.keyId, t.mailboxId)]);
-
 export const oidcAttempts = sqliteTable("oidc_attempts", {
 	tokenHash: text("token_hash").primaryKey(),
 	state: text("state").notNull(),
@@ -620,7 +581,6 @@ export const oidcAttempts = sqliteTable("oidc_attempts", {
 });
 
 export const schema = {
-	apiKeyMailboxes,
 	oidcAttempts,
 	users,
 	domains,
@@ -630,7 +590,6 @@ export const schema = {
 	contacts,
 	folders,
 	jmapMailboxRevisions,
-	apiKeys,
 	messages,
 	spamTokenStats,
 	spamReputation,
@@ -648,6 +607,5 @@ export const schema = {
 	auditLogs,
 	backupSettings,
 	appSettings,
-	licenseSettings,
 	backups,
 };

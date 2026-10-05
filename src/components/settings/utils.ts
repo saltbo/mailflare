@@ -102,16 +102,3 @@ export async function updateMailboxAutoReply(
 		body: data.mailbox.autoReplyBody,
 	};
 }
-
-/** An API key limited to the JMAP scope, for external mail apps. */
-export async function createJmapApiKey(name: string): Promise<string> {
-	const res = await authFetch("/api/api-keys", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ name, scopes: ["jmap"], mailboxIds: (await (await authFetch("/api/mailboxes")).json() as { mailboxes: { id: string }[] }).mailboxes.map((mailbox) => mailbox.id) }),
-	});
-	const data = (await res.json()) as { key?: string; error?: unknown };
-	if (!res.ok || !data.key) throw new Error(typeof data.error === "string" ? data.error : "Could not create a key");
-	window.dispatchEvent(new Event("mailflare:api-keys-changed"));
-	return data.key;
-}

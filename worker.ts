@@ -7,7 +7,7 @@ import {
 import { processOutboundQueue, type OutboundQueueMessage } from "./src/lib/email/send";
 import { isInboundQueueMessage, isWebhookRetryMessage } from "./worker-utils";
 import { processWebhookRetry, type WebhookRetryMessage } from "./src/lib/email/webhooks";
-import { resolveIncomingMail, forwardMessage } from "./src/lib/email/incoming";
+import { forwardMessage } from "./src/lib/email/incoming";
 import { getUserFromSession } from "./src/lib/auth/session";
 import { getSessionTokenFromRequest } from "./src/lib/realtime/utils";
 import { inboundAttachmentLimitReasonFromRaw } from "./src/lib/email/inbound-attachments";
@@ -52,26 +52,11 @@ export default {
 				message.setReject("Message rejected: raw email exceeds the 25 MiB receiving limit. Send a download link instead.");
 				return;
 			}
-			// Domain routing rules are resolved here rather than in the queue because reject and
-			// forward can only be actioned on the live ForwardableEmailMessage.
-			const decision = await resolveIncomingMail(env, message.from, message.to);
-
-			if (decision?.action === "reject") {
-				message.setReject(decision.rejectReason ?? "Message rejected by routing rule");
-				return;
-			}
 			const raw = await new Response(message.raw).arrayBuffer();
 			const attachmentLimitReason = await inboundAttachmentLimitReasonFromRaw(raw);
 			if (attachmentLimitReason) {
 				message.setReject(attachmentLimitReason);
 				return;
-			}
-
-			if (decision?.action === "forward" && decision.forwardTo) {
-				const forwarded = await forwardMessage(message, decision.forwardTo);
-				// A forward rule drops the message unless it was explicitly asked to keep a copy.
-				// If the forward itself failed we still store it, so mail is never silently lost.
-				if (forwarded && !decision.keepCopy) return;
 			}
 
 			if (message.headers.get(MAILFLARE_FORWARDED_HEADER) !== "1") {
