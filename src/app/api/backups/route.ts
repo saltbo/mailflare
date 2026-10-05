@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assertPrimaryAdmin } from "@/lib/auth/admin";
+import { assertOperator } from "@/lib/auth/admin";
 import { requireUser } from "@/lib/auth/cookies";
 import { getBackupConfigurationStatus } from "@/lib/backups/export";
 import { runDatabaseBackup } from "@/lib/backups/runner";
@@ -15,7 +15,7 @@ import { parseBackupSettingsInput } from "./utils";
 async function requireAdmin(request: Request) {
 	const env = getEnv();
 	const user = await requireUser(env, request);
-	assertPrimaryAdmin(user);
+	assertOperator(user);
 	return { env, user };
 }
 

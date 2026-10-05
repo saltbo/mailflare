@@ -1,22 +1,2 @@
-export type UserRole = "admin" | "user";
-
-export type SessionUser = {
-	id: string;
-	email: string;
-	resetEmail: string | null;
-	forwardingEmail: string | null;
-	passwordHash: string;
-	name: string;
-	timeZone: string | null;
-	role: UserRole;
-	isPrimaryAdmin: boolean;
-	disabled: boolean;
-	canManageMailboxes: boolean;
-	canManageDomains: boolean;
-	canManageUsers: boolean;
-	keyboardShortcutsEnabled: boolean;
-	spamProtectionEnabled: boolean;
-	showFullRecipientAddresses: boolean;
-	createdByUserId: string | null;
-	createdAt: Date;
-};
+import type { users } from "@/db/schema";
+export type SessionUser = typeof users.$inferSelect & { isOperator: boolean };

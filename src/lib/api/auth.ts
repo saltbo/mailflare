@@ -1,3 +1,4 @@
+import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { authenticateApiKeyValue, hasScope } from "@/lib/api/key-auth";
@@ -21,6 +22,7 @@ export const requireScope = hasScope;
  * status.
  */
 export async function requireSessionUser(env: CloudflareEnv, request: Request) {
+	if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && !hasValidSessionMutationOrigin(request, env.APP_URL)) return { user: null, error: NextResponse.json({ error: "Invalid origin" }, { status: 403 }) } as const;
 	const user = await getCurrentUser(env, request);
 	if (!user) {
 		return { user: null, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 	const env = getEnv();
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const input = (await request.json().catch(() => null)) as { mailboxId?: string | null; from?: string; title?: string; html?: string; text?: string } | null;
 	const title = input?.title?.trim().slice(0, 200);
 	const html = input?.html ?? "";

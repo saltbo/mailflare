@@ -24,7 +24,7 @@ Want to support the mailflare? <a target="_blank" href="https://store.paymug.co/
 ## What you can do
 
 - **Domains**: Connect your Cloudflare domains and choose Cloudflare, Resend, or Amazon SES for each.
-- **Mailboxes**: Create personal or shared mailboxes and give other people access to them.
+- **Mailboxes**: Sign in with Realmroot and create your own personal mailbox on an enabled domain.
 - **Email**: Send and receive mail with attachments, rich text, signatures, and automatic replies.
 - **Calendar**: Schedule repeating events with time zones and attendees, who receive email invitations.
 - **Booking pages**: Share a public link so anyone can book a free time on your calendar.
@@ -32,9 +32,7 @@ Want to support the mailflare? <a target="_blank" href="https://store.paymug.co/
 - **Routing rules**: Store, forward, reject, or sort incoming mail automatically.
 - **Notifications**: Get live inbox updates and alerts when new mail arrives.
 - **Import, export, contacts**: Move mail in and out, manage contacts, and block unwanted senders.
-- **Admin**: Manage users, permissions, API keys, webhooks, audit logs, and backups.
-- **AI assistant**: Search your mail, draft replies, and manage calendar events with AI.
-- **MCP access**: Connect AI clients over MCP, with separate permissions for each key.
+- **Infrastructure**: Deployment-configured operators manage domains, providers, webhooks, audit logs and backups.
 
 ## How it works
 
@@ -65,8 +63,8 @@ You choose the provider per domain and can switch anytime (see [Sending and rece
 ## Deploy
 
 1. **Deploy the app.** Click **Deploy to Cloudflare**. Keep the app name `mailflare`. Other Worker names will break the app.
-2. **Finish setup.** Open the deployed app and follow `/setup` to check the install and create your admin account.
-3. **Connect a domain.** Add a domain from the same Cloudflare account and choose which service receives its mail. Mailflare sets up Email Routing, or guides you through Resend or Amazon SES. Then create your first mailbox. Add Resend or AWS credentials on the domain page when you need them.
+2. **Configure Realmroot.** Follow [Realmroot sign-in](docs/realmroot.md). Set the confidential client and exact callback URL, app origin, and operator subjects. Use an empty database for this edition.
+3. **Connect a domain.** Add a domain from the same Cloudflare account and choose which service receives its mail. Mailflare sets up Email Routing, or guides you through Resend or Amazon SES. Users sign in and create their own personal mailboxes. Add Resend or AWS credentials on the domain page when you need them.
 
 ⚠️ **`CF_TOKEN` is required during deployment.** Create a scoped [Cloudflare API token with these permissions](https://github.com/hieunc229/mailflare/issues/24#issuecomment-5523686105) for the domains you want to connect:
 
@@ -92,11 +90,10 @@ exactly mailflare. In the selected account, create or reuse the D1 database
 mailflare, R2 bucket mailflare-raw, and Queues mailflare-inbound,
 mailflare-outbound, and mailflare-agent. Set the D1 database_id in the local
 Wrangler config without committing that account-specific ID. Install dependencies,
-run npm run deploy, and set the runtime CF_TOKEN as a Worker secret. Do not run
-remote D1 migrations manually; the /setup flow initializes the database.
+run npm run deploy, and set the runtime CF_TOKEN as a Worker secret. Use a fresh empty database; the OIDC login flow initializes it.
 
-Give me the deployed URL and any remaining Cloudflare account actions. I will
-open /setup, create the first admin account, and connect my domain there.
+Give me the deployed URL and any remaining Cloudflare account actions. Configure the Realmroot confidential web client using docs/realmroot.md.
+Operators connect the domain; users sign in and create their own mailboxes.
 ```
 
 See the [deployment guide](docs/deployment.md) for permissions, manual deployment, backups, and updates.
@@ -124,9 +121,9 @@ npm run db:migrate:local
 npm run dev
 ```
 
-Add your Cloudflare credentials to `.dev.vars`, then open [http://localhost:3000](http://localhost:3000). To load sample data, run `npm run db:seed` while the dev server is running.
+Add your Cloudflare credentials to `.dev.vars`, then open [http://localhost:3000](http://localhost:3000). For local login, register a loopback OIDC callback and configure APP_URL and the client credentials.
 
-The Cloudflare app uses vinext and the Cloudflare Vite plugin, with local D1, R2, Queues, and Durable Objects. Remote bindings are off by default. To use Workers AI locally, log in with Wrangler, set `CLOUDFLARE_ACCOUNT_ID`, and run `CLOUDFLARE_REMOTE_BINDINGS=true npm run dev`.
+The Cloudflare app uses vinext and the Cloudflare Vite plugin, with local D1, R2, Queues, and Durable Objects. Remote bindings are off by default.
 
 - `npm run build`: build the full Worker.
 - `npm run start`: preview that build locally.
@@ -134,12 +131,15 @@ The Cloudflare app uses vinext and the Cloudflare Vite plugin, with local D1, R2
 
 The Node/Docker runtime still uses Next.js with `build:node`, `start:node`, and `dev:node`.
 
+This edition removes local password/MFA authentication, in-app role management, shared mailboxes, AI and MCP. Realmroot owns identity; Mailflare keeps only business-user mapping, application sessions and per-user data ownership.
+
+See [Realmroot setup](docs/realmroot.md) and [deferred Resource Server work](docs/TODO.md).
+
 ## Documentation
 
 - [Deployment and configuration](docs/deployment.md)
 - [Sending and receiving providers (Cloudflare, Resend, Amazon SES)](docs/providers.md)
 - [API and integrations](docs/api.md), including the [calendar and booking APIs](docs/api.md#calendar-and-booking)
-- [Email assistant and MCP](docs/email-assistant-and-mcp.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
 ## License

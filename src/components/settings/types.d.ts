@@ -1,6 +1,5 @@
 export type ProfileFormProps = {
 	initialName: string;
-	initialResetEmail: string;
 	email: string;
 };
 
@@ -8,7 +7,6 @@ export type ProfileFormResponse = {
 	user?: {
 		name: string;
 		timeZone: string | null;
-		resetEmail: string | null;
 		forwardingEmail: string | null;
 		canForwardEmail: boolean;
 	};
@@ -17,34 +15,18 @@ export type ProfileFormResponse = {
 
 export type AccountSettingsResponse = {
 	user?: {
+		timeZone: string | null;
 		id: string;
 		email: string;
 		name: string;
-		resetEmail: string | null;
 		forwardingEmail: string | null;
 		canForwardEmail: boolean;
 	};
 	error?: unknown;
 };
 
-export type MfaStatusResponse = {
-	enabled: boolean;
-	confirmedAt: string | null;
-	recoveryCodesLeft: number;
-	error?: unknown;
-};
 
-export type MfaEnrollmentResponse = {
-	secret?: string;
-	otpauthUrl?: string;
-	qrSvg?: string;
-	error?: unknown;
-};
 
-export type MfaRecoveryCodesResponse = {
-	recoveryCodes?: string[];
-	error?: unknown;
-};
 
 export type ForwardingEmailFormProps = {
 	initialForwardingEmail: string;
@@ -58,6 +40,7 @@ export type ForwardingEmailResponse = {
 export type MailboxSignatureResponse = {
 	mailbox?: {
 		id: string;
+		domainId: string;
 		localPart: string;
 		hostname: string;
 		displayName: string | null;
@@ -83,9 +66,6 @@ export type MailboxAutoReplyResponse = {
 	error?: unknown;
 };
 
-export type ChangePasswordResponse = {
-	error?: unknown;
-};
 
 export type ProfileAvatarSessionResponse = {
 	user?: {
@@ -107,6 +87,7 @@ export type ProfileAvatarFormProps = {
 export type CurrentMailboxFormResponse = {
 	mailbox?: {
 		id: string;
+		domainId: string;
 		localPart: string;
 		hostname: string;
 		displayName: string | null;

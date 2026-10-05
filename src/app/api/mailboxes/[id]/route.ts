@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
-import { mailboxes, users } from "@/db/schema";
+import { mailboxes } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
 import { getMailboxAccessLevel } from "@/lib/mailboxes/access";
-import { ensureMailboxDomainRouting, removeMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
+import { removeMailboxDomainRouting } from "@/lib/mailboxes/domain-addresses";
 import { isPrimaryMailbox, tracksAccountIdentity } from "@/lib/profile/identity-utils";
 import { syncPersonalIdentity } from "@/lib/profile/sync";
 import { updateMailboxSchema } from "@/lib/validators";
@@ -73,22 +73,6 @@ export async function PATCH(request: Request, { params }: MailboxRouteParams) {
 		});
 		delete updateValues.displayName;
 	}
-	if (parsed.data.useAllDomains === true) {
-		try {
-			await ensureMailboxDomainRouting(env, db, {
-				id: existing.id,
-				domainId: existing.domainId,
-				localPart: existing.localPart,
-				useAllDomains: true,
-			});
-		} catch (error) {
-			console.error("ensureMailboxDomainRouting", error);
-			return NextResponse.json(
-				{ error: "Failed to configure inbound routing for all domains. Please try saving again." },
-				{ status: 502 },
-			);
-		}
-	}
 	if (Object.keys(updateValues).length > 0) {
 		await db
 			.update(mailboxes)
@@ -119,12 +103,7 @@ export async function DELETE(request: Request, { params }: MailboxRouteParams) {
 	const [mailbox] = await db.select().from(mailboxes).where(eq(mailboxes.id, id)).limit(1);
 	if (!mailbox) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 
-	let allowed = mailbox.userId === user.id && user.canManageMailboxes;
-	if (!allowed && user.role === "admin") {
-		const [owner] = await db.select({ createdByUserId: users.createdByUserId }).from(users).where(eq(users.id, mailbox.userId)).limit(1);
-		allowed = mailbox.userId === user.id || owner?.createdByUserId === user.id;
-	}
-	if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+	if (mailbox.userId !== user.id) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 });
 
 	try {
 		await removeMailboxDomainRouting(env, db, {

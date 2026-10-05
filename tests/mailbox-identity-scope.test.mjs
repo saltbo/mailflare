@@ -117,7 +117,7 @@ test("the mailbox routes gate the account name on the identity check", () => {
 	);
 
 	const list = read("src/app/api/mailboxes/route.ts");
-	assert.match(list, /tracksAccountIdentity\(mailbox, user\.email\)/);
+	assert.match(list, /listAccessibleMailboxes\(db, auth\.user\)/);
 	assert.ok(
 		!/mailbox\.type === "personal"\n?\s*\? \{ displayName: user\.name/.test(list),
 		"the list response must not overwrite every personal mailbox name with the account name",

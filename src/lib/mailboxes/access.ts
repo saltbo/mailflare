@@ -1,44 +1,21 @@
 import { and, eq } from "drizzle-orm";
 import type { AppDatabase } from "@/db";
-import { domains, mailboxAccess, mailboxes } from "@/db/schema";
+import { domains, mailboxes } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth/types";
-import { isTeamMailboxSharingEnabled } from "./access-utils";
 import type { MailboxAccessLevel, MailboxPermission } from "./types";
-
-const permissionRank: Record<MailboxPermission, number> = {
-	read_only: 1,
-	send_on_behalf: 2,
-	send_as: 3,
-	full_access: 4,
-};
-
-export function hasMailboxPermission(permission: MailboxPermission, required: MailboxPermission): boolean {
-	return permissionRank[permission] >= permissionRank[required];
-}
 
 export async function getMailboxAccessLevel(
 	db: AppDatabase,
-	user: Pick<SessionUser, "id" | "role">,
+	user: Pick<SessionUser, "id">,
 	mailboxId: string,
 ): Promise<MailboxAccessLevel | null> {
 	const [mailbox] = await db.select().from(mailboxes).where(eq(mailboxes.id, mailboxId)).limit(1);
 	if (!mailbox || mailbox.disabled) return null;
 
-	const isOwner = mailbox.userId === user.id;
-	if (isOwner) return buildAccess(mailbox, "full_access", true);
-	if (mailbox.type !== "shared" || !(await isTeamMailboxSharingEnabled(db))) return null;
-
-	const [delegatedAccess] = await db
-		.select({ permission: mailboxAccess.permission })
-		.from(mailboxAccess)
-		.where(and(eq(mailboxAccess.mailboxId, mailbox.id), eq(mailboxAccess.userId, user.id)))
-		.limit(1);
-	if (delegatedAccess) return buildAccess(mailbox, delegatedAccess.permission, false);
-
-	return null;
+	return mailbox.userId === user.id ? buildAccess(mailbox) : null;
 }
 
-export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<SessionUser, "id" | "email" | "role">) {
+export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<SessionUser, "id" | "email">) {
 	const ownedRows = await db
 		.select({
 			id: mailboxes.id,
@@ -71,65 +48,14 @@ export async function listAccessibleMailboxes(db: AppDatabase, user: Pick<Sessio
 			};
 		});
 
-	if (!(await isTeamMailboxSharingEnabled(db))) return owned;
-	const sharedRows = await db
-		.select({
-			id: mailboxes.id,
-			userId: mailboxes.userId,
-			domainId: mailboxes.domainId,
-		localPart: mailboxes.localPart,
-		displayName: mailboxes.displayName,
-		signature: mailboxes.signature,
-		autoReplyEnabled: mailboxes.autoReplyEnabled,
-		autoReplySubject: mailboxes.autoReplySubject,
-		autoReplyBody: mailboxes.autoReplyBody,
-		useAllDomains: mailboxes.useAllDomains,
-			avatarKey: mailboxes.avatarKey,
-			type: mailboxes.type,
-			disabled: mailboxes.disabled,
-			createdAt: mailboxes.createdAt,
-			hostname: domains.hostname,
-			permission: mailboxAccess.permission,
-		})
-		.from(mailboxAccess)
-		.innerJoin(mailboxes, eq(mailboxAccess.mailboxId, mailboxes.id))
-		.innerJoin(domains, eq(mailboxes.domainId, domains.id))
-		.where(
-			and(
-				eq(mailboxAccess.userId, user.id),
-				eq(mailboxes.type, "shared"),
-				eq(mailboxes.disabled, false),
-			),
-		);
-	const shared = sharedRows.map((row) => {
-		const { avatarKey, ...mailbox } = row;
-		return {
-			...mailbox,
-			hasAvatar: !!avatarKey,
-			isPrimary: false,
-		};
-	});
-
-	return [...owned, ...shared];
+	return owned;
 }
 
-export async function listAccessibleMailboxIds(db: AppDatabase, user: Pick<SessionUser, "id" | "email" | "role">) {
+export async function listAccessibleMailboxIds(db: AppDatabase, user: Pick<SessionUser, "id" | "email">) {
 	const rows = await listAccessibleMailboxes(db, user);
 	return rows.map((row) => row.id);
 }
 
-function buildAccess(
-	mailbox: MailboxAccessLevel["mailbox"],
-	permission: MailboxPermission,
-	isOwner: boolean,
-): MailboxAccessLevel {
-	return {
-		mailbox,
-		permission,
-		isOwner,
-		canRead: hasMailboxPermission(permission, "read_only"),
-		canSendAs: hasMailboxPermission(permission, "send_as"),
-		canSendOnBehalf: hasMailboxPermission(permission, "send_on_behalf"),
-		canManage: hasMailboxPermission(permission, "full_access"),
-	};
+function buildAccess(mailbox: MailboxAccessLevel["mailbox"]): MailboxAccessLevel {
+ return { mailbox, permission: "full_access", isOwner: true, canRead: true, canSendAs: true, canSendOnBehalf: false, canManage: true };
 }

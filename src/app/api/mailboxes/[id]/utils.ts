@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { domains, mailboxes, users } from "@/db/schema";
 import type { getDb } from "@/db";
 import type { MailboxUpdateValues } from "./types";
@@ -29,7 +29,7 @@ export function selectMailboxForUser(db: Db, userId: string, mailboxId: string) 
 		.from(mailboxes)
 		.innerJoin(domains, eq(mailboxes.domainId, domains.id))
 		.innerJoin(users, eq(mailboxes.userId, users.id))
-		.where(eq(mailboxes.id, mailboxId))
+		.where(and(eq(mailboxes.id, mailboxId), eq(mailboxes.userId, userId)))
 		.limit(1);
 }
 

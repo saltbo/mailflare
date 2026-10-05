@@ -17,8 +17,6 @@ import {
 	MAILFLARE_FORWARDED_HEADER,
 } from "./src/lib/email/account-forwarding";
 import { runScheduledDatabaseBackup } from "./src/lib/backups/runner";
-import { processAgentDraftJob } from "./src/lib/agent/jobs/utils";
-import { runAgentMaintenance } from "./src/lib/agent/maintenance";
 export { RealtimeHub } from "./src/lib/realtime/hub";
 
 export default {
@@ -28,11 +26,12 @@ export default {
 			if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
 				return new Response("Expected WebSocket upgrade", { status: 426 });
 			}
-			if (!hasValidSessionMutationOrigin(request)) {
+			if (!hasValidSessionMutationOrigin(request, env.APP_URL)) {
 				return new Response("Invalid origin", { status: 403 });
 			}
 
-			const user = await getUserFromSession(env, getSessionTokenFromRequest(request));
+			const sessionToken = getSessionTokenFromRequest(request);
+			const user = await getUserFromSession(env, sessionToken);
 			if (!user || user.disabled) {
 				return new Response("Unauthorized", { status: 401 });
 			}
@@ -40,6 +39,7 @@ export default {
 			const hub = env.REALTIME.getByName(user.id);
 			const hubRequest = new Request("https://mailflare-realtime/connect", request);
 			hubRequest.headers.set("X-Mailflare-Realtime-User", user.id);
+			hubRequest.headers.set("X-Mailflare-Realtime-Session", sessionToken!);
 			return hub.fetch(hubRequest);
 		}
 
@@ -99,8 +99,6 @@ export default {
 			try {
 				if (isInboundQueueMessage(msg.body)) {
 					await processInboundMessage(env, msg.body);
-				} else if (typeof msg.body === "object" && msg.body !== null && (msg.body as { kind?: unknown }).kind === "agent.draft" && typeof (msg.body as { jobId?: unknown }).jobId === "string") {
-					await processAgentDraftJob(env, (msg.body as { jobId: string }).jobId);
 				} else if (isWebhookRetryMessage(msg.body)) {
 					await processWebhookRetry(env, msg.body as WebhookRetryMessage);
 				} else if (typeof msg.body === "object" && msg.body !== null && (msg.body as { kind?: unknown }).kind === "email.scheduled") {
@@ -123,6 +121,5 @@ export default {
 
 	async scheduled(controller: ScheduledController, env: CloudflareEnv, ctx: ExecutionContext) {
 		if (controller.cron === "0 2 * * *") ctx.waitUntil(runScheduledDatabaseBackup(env, new Date(controller.scheduledTime)));
-		ctx.waitUntil(runAgentMaintenance(env));
 	},
 } satisfies ExportedHandler<CloudflareEnv>;

@@ -42,27 +42,6 @@ export const sendEmailSchema = z.object({
 		.optional(),
 });
 
-export const registerSchema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8),
-	name: z.string().min(1),
-});
-
-export const firstRunRegisterSchema = z.object({
-	domain: z.string().min(3),
-	enableSending: z.boolean().optional(),
-	replaceMxRecords: z.boolean().optional(),
-	username: z.string().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-	password: z.string().min(8),
-	resetEmail: z.string().email(),
-});
-
-export const primaryDomainRegisterSchema = z.object({
-	username: z.string().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-	password: z.string().min(8),
-	resetEmail: z.string().email(),
-});
-
 export const setupDomainSchema = z.object({
 	hostname: z.string().min(3),
 });
@@ -78,119 +57,20 @@ export const addDomainSchema = z.object({
 	receivingProvider: z.enum(["none", "cloudflare", "resend", "ses"]).optional(),
 });
 
-export const loginSchema = z.object({
-	email: z.string().email(),
-	password: z.string().min(1),
-});
-
-export const passwordResetRequestSchema = z.object({
-	email: z.string().trim().email(),
-});
-
-export const passwordResetConfirmSchema = z.object({
-	token: z.string().min(8).max(200),
-	password: z.string().min(8).max(128),
-});
-
-export const mfaVerifySchema = z.object({
-	challengeToken: z.string().min(8).max(200),
-	code: z.string().trim().min(6).max(32),
-});
-
-export const mfaEnrollSchema = z.object({
-	password: z.string().min(1),
-});
-
-export const mfaConfirmSchema = z.object({
-	code: z.string().trim().min(6).max(12),
-});
-
-export const mfaDisableSchema = z.object({
-	password: z.string().min(1),
-	code: z.string().trim().min(6).max(32),
-});
-
 export const domainSchema = z.object({
 	hostname: z.string().min(3),
 });
 
 export const mailboxSchema = z.object({
 	domainId: z.string().min(1),
-	ownerUserId: z.string().min(1).optional(),
-	localPart: z.string().min(1).max(64),
-	displayName: z.string().optional(),
-	type: z.enum(["personal", "shared"]).optional(),
-});
-
-export const updateManagedAccountSchema = z.object({
-	name: z.string().trim().min(1).max(100),
-	role: z.enum(["admin", "user"]),
-	disabled: z.boolean(),
-	canManageMailboxes: z.boolean(),
-	canManageDomains: z.boolean().optional(),
-	canManageUsers: z.boolean().optional(),
-	forwardingEmail: z.preprocess(
-		(value) => (typeof value === "string" ? value.trim() : value),
-		z.string().email().or(z.literal("")).nullable().optional().transform((value) => value === undefined ? undefined : value || null),
-	),
-	/** Set a new password for the account; every session of that user is revoked. */
-	password: z.preprocess(
-		(value) => (typeof value === "string" ? value.trim() : value),
-		z.string().min(8).max(128).or(z.literal("")).optional().transform((value) => value || null),
-	),
-});
-
-export const createAccountSchema = z.object({
-	domainId: z.string().min(1),
-	username: z.string().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-	password: z.string().min(8),
-	name: z.string().trim().min(1).max(100).optional(),
-	resetEmail: z.preprocess(
-		(value) => (typeof value === "string" ? value.trim() : value),
-		z.string().email().or(z.literal("")).optional().transform((value) => value || null),
-	),
-});
+	localPart: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/).transform((value) => value.toLowerCase()),
+	displayName: z.string().trim().max(100).optional(),
+}).strict();
 
 export const createMailboxAliasSchema = z.object({
 	domainId: z.string().min(1),
 	localPart: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/)
 		.transform((value) => value.toLowerCase()),
-});
-
-export const createUserAccountSchema = z.object({
-	username: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-	domainId: z.string().min(1),
-	password: z.string().min(8).max(128),
-	role: z.enum(["admin", "user"]).default("user"),
-	// Existing API/MCP clients retain the previous behavior when this is omitted.
-	useAllDomains: z.boolean().default(true),
-	aliases: z.array(createMailboxAliasSchema).default([]),
-});
-
-export const updateAccountSchema = z.object({
-	email: z.string().email().optional(),
-	name: z.string().trim().min(1).max(100),
-	disabled: z.boolean().optional(),
-	password: z.preprocess(
-		(value) => (typeof value === "string" ? value.trim() : value),
-		z.string().min(8).or(z.literal("")).optional().transform((value) => value || null),
-	),
-});
-
-export const mailboxAccessSchema = z.object({
-	userId: z.string().min(1),
-	permission: z.enum(["read_only", "send_as", "send_on_behalf", "full_access"]),
-});
-
-export const accountMailboxAccessSchema = z.object({
-	mailboxId: z.string().min(1),
-	permission: z.enum(["read_only", "send_as", "send_on_behalf", "full_access"]),
-});
-
-export const accountMailboxSchema = z.object({
-	domainId: z.string().min(1),
-	localPart: z.string().min(1).max(64).regex(/^[a-zA-Z0-9._%+-]+$/),
-	displayName: z.string().trim().max(100).optional(),
 });
 
 export const updateMailboxSchema = z.object({
@@ -199,8 +79,7 @@ export const updateMailboxSchema = z.object({
 	autoReplyEnabled: z.boolean().optional(),
 	autoReplySubject: z.string().trim().max(200).optional(),
 	autoReplyBody: z.string().max(10_000).optional(),
-	useAllDomains: z.boolean().optional(),
-});
+}).strict();
 
 export const folderSchema = z.object({
 	mailboxId: z.string().min(1),
@@ -210,10 +89,6 @@ export const folderSchema = z.object({
 
 export const updateProfileSchema = z.object({
 	name: z.string().trim().min(1).max(100),
-	resetEmail: z.preprocess(
-		(value) => (typeof value === "string" ? value.trim() : value),
-		z.string().email().or(z.literal("")).transform((value) => value || null),
-	),
 	forwardingEmail: z.preprocess(
 		(value) => (typeof value === "string" ? value.trim() : value),
 		z.string().email().or(z.literal("")).optional().transform((value) => value === undefined ? undefined : value || null),
@@ -237,11 +112,6 @@ export const updateSpamSettingsSchema = z.object({
 
 export const updateRecipientAddressSettingsSchema = z.object({
 	enabled: z.boolean(),
-});
-
-export const changePasswordSchema = z.object({
-	currentPassword: z.string().min(1),
-	newPassword: z.string().min(8).max(128),
 });
 
 export const routingRuleSchema = z.object({

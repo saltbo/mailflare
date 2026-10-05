@@ -12,7 +12,7 @@ export async function PATCH(request: Request) {
 	const env = getEnv();
 	const user = await getCurrentUser(env, request);
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const input = await parseTimeZoneUpdate(request);
 	if (!input) return NextResponse.json({ error: "Choose a valid timezone" }, { status: 400 });
 	const db = getDb(env);

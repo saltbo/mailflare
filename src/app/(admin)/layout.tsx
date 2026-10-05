@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { HelpCircle, Search } from "lucide-react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
 import { FloatingComposer } from "@/components/compose/floating-composer";
@@ -17,33 +16,17 @@ import { SidebarAside, MobileTopBar } from "@/components/sidebar-aside";
 import { SidebarResizeBoundary } from "@/components/sidebar-resize-boundary";
 import { ShortcutsProvider } from "@/components/shortcuts";
 
-const primaryOnlyPrefixes = [
-  "/agent",
-  "/api-keys",
-  "/webhooks",
-  "/backups",
-  "/branding",
-  "/licenses",
-  "/activity",
-  "/audit-logs",
-  "/general",
-  "/ai-usage",
-];
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const requirePrimary = primaryOnlyPrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
 
   const mobileTitle = adminPageTitles[pathname];
 
   return (
-    <AuthGuard requireMailbox requireRole="admin" requirePrimary={requirePrimary}>
+    <AuthGuard requireOperator>
       <SidebarProvider expandedWidth={256} mobileOverlay>
       <MailboxProvider>
         <ComposeProvider>

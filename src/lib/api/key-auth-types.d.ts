@@ -1,9 +1,9 @@
-import type { users } from "@/db/schema";
+import type { SessionUser } from "@/lib/auth/types";
 
 export type ApiAuthResult = {
 	userId: string;
 	email: string;
 	scopes: string[];
 	mailboxIds: string[] | null;
-	user: typeof users.$inferSelect;
+	user: SessionUser;
 };

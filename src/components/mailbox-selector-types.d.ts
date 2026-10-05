@@ -2,9 +2,9 @@ import type { MailboxOption } from "./mailbox-provider";
 
 export type MailboxSelectorUser = {
 	id: string;
+	isOperator: boolean;
 	email: string;
 	name: string;
-	role: "admin" | "user";
 	hasAvatar: boolean;
 };
 

@@ -1,3 +1,4 @@
+import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { parse } from "node:url";
@@ -6,7 +7,6 @@ import { WebSocketServer } from "ws";
 import { getUserFromSession } from "@/lib/auth/session";
 import { getSessionTokenFromRequest } from "@/lib/realtime/utils";
 import { processInboundMessage } from "@/lib/email/inbound";
-import { processAgentDraftJob } from "@/lib/agent/jobs/utils";
 import { processOutboundQueue, type OutboundQueueMessage } from "@/lib/email/send";
 import { processWebhookRetry, type WebhookRetryMessage } from "@/lib/email/webhooks";
 import { isInboundQueueMessage, isWebhookRetryMessage } from "../worker-utils";
@@ -38,9 +38,6 @@ async function main() {
 		if (isWebhookRetryMessage(body)) await processWebhookRetry(env, body as WebhookRetryMessage);
 		else await processOutboundQueue(env, body as OutboundQueueMessage);
 	});
-	runtime.agentQueue.setConsumer(async (body) => {
-		if (typeof body === "object" && body !== null && (body as { kind?: unknown }).kind === "agent.draft" && typeof (body as { jobId?: unknown }).jobId === "string") await processAgentDraftJob(env, (body as { jobId: string }).jobId);
-	});
 
 	const app = next({ dev, dir: process.cwd(), hostname: host, port });
 	const handle = app.getRequestHandler();
@@ -59,6 +56,11 @@ async function main() {
 			else socket.destroy();
 			return;
 		}
+		if (!hasValidSessionMutationOrigin(new Request(env.APP_URL ?? "http://localhost/", { headers: { origin: request.headers.origin ?? "" } }), env.APP_URL)) {
+			socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+			socket.destroy();
+			return;
+		}
 		const cookie = request.headers.cookie ?? "";
 		const token = getSessionTokenFromRequest(new Request("http://localhost/", { headers: { cookie } }));
 		void getUserFromSession(env, token).then((user) => {
@@ -67,7 +69,7 @@ async function main() {
 				socket.destroy();
 				return;
 			}
-			wss.handleUpgrade(request, socket, head, (ws) => runtime.realtime.attach(user.id, ws));
+			wss.handleUpgrade(request, socket, head, (ws) => runtime.realtime.attach(user.id, ws, token!));
 		});
 	});
 
@@ -91,7 +93,6 @@ async function main() {
 		stopScheduler();
 		runtime.inboundQueue.stop();
 		runtime.outboundQueue.stop();
-		runtime.agentQueue.stop();
 		server.close(() => process.exit(0));
 		setTimeout(() => process.exit(0), 5000).unref();
 	};

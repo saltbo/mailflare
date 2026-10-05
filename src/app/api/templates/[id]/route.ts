@@ -11,7 +11,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 	const env = getEnv();
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const { id } = await params;
 	const db = getDb(env);
 	const [row] = await db

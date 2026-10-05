@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assertAdmin } from "@/lib/auth/admin";
+import { assertOperator } from "@/lib/auth/admin";
 import { requireSessionUser } from "@/lib/api/auth";
 import { getEnv } from "@/lib/cloudflare";
 import { getSearchIndexStatus, rebuildSearchIndex } from "@/lib/search/index-admin";
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	try {
-		assertAdmin(auth.user);
+		assertOperator(auth.user);
 	} catch {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 	const auth = await requireSessionUser(env, request);
 	if (auth.error) return auth.error;
 	try {
-		assertAdmin(auth.user);
+		assertOperator(auth.user);
 	} catch {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}

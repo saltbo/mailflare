@@ -5,13 +5,9 @@ import { AUTH_SESSION_CHANGED_EVENT, authFetch } from "@/lib/auth/client";
 
 export type CurrentUser = {
 	id: string;
+	isOperator: boolean;
 	email: string;
 	name: string;
-	role: "admin" | "user";
-	isPrimaryAdmin: boolean;
-	canManageMailboxes: boolean;
-	canManageDomains: boolean;
-	canManageUsers: boolean;
 	hasAvatar: boolean;
 };
 

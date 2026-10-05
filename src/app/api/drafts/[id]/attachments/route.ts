@@ -1,7 +1,7 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
-import { agentDraftMetadata, messages } from "@/db/schema";
+import { messages } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth/cookies";
 import { hasValidSessionMutationOrigin } from "@/lib/auth/origin";
 import { MAX_ATTACHMENT_COUNT, listMessageAttachments, storeMessageAttachments } from "@/lib/email/attachments";
@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: DraftAttachmentUploadPa
 	const env = getEnv();
 	const user = await getCurrentUser(env, request);
 	if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-	if (!hasValidSessionMutationOrigin(request)) return Response.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return Response.json({ error: "Invalid origin" }, { status: 403 });
 	const db = getDb(env);
 	const [draft] = await db.select().from(messages).where(eq(messages.id, id)).limit(1);
 	if (!userOwnsDraft(draft, user.id)) return Response.json({ error: "Draft not found" }, { status: 404 });
@@ -30,7 +30,6 @@ export async function POST(request: Request, { params }: DraftAttachmentUploadPa
 	if (existing.length + files.length > MAX_ATTACHMENT_COUNT || files.some((file) => file.size > maxBytes) || existing.reduce((total, file) => total + file.size, 0) + files.reduce((total, file) => total + file.size, 0) > maxBytes) return Response.json({ error: "Draft attachments exceed the allowed count or outgoing size limit" }, { status: 400 });
 	try {
 		const attachments = await storeMessageAttachments(env, id, await Promise.all(files.map(async (file) => ({ filename: file.name, type: file.type || "application/octet-stream", content: await file.arrayBuffer(), disposition: "attachment" as const }))));
-		await db.update(agentDraftMetadata).set({ revision: sql`${agentDraftMetadata.revision} + 1`, humanEditedAt: new Date() }).where(eq(agentDraftMetadata.draftId, id));
 		return Response.json({ attachments });
 	} catch (error) {
 		return Response.json({ error: error instanceof Error ? error.message : "Could not add attachments" }, { status: 400 });

@@ -7,11 +7,6 @@ export interface NewMessageNotification {
 	type: "new_message";
 }
 
-export interface AgentDraftNotification {
-	mailboxId: string;
-	draftId: string;
-	type: "agent_draft";
-}
 
 export interface MailboxRevisionRow {
 	mailbox_id: string;
@@ -32,5 +27,5 @@ export interface RevisionNotification {
 
 export interface RealtimeNotificationRequest {
 	userIds: string[];
-	payload: NewMessageNotification | AgentDraftNotification;
+	payload: NewMessageNotification;
 }

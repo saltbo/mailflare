@@ -1,6 +1,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "mailflare",
+	"vars": { "APP_URL": "https://mail.tftt.cc", "OIDC_ISSUER": "https://id.realmroot.dev/api/auth", "MAILBOX_DOMAIN": "tftt.cc" },
 	"main": "./worker.ts",
 	"compatibility_date": "2026-05-20",
 	"compatibility_flags": [
@@ -21,7 +22,7 @@
 		},
 	],
 	"triggers": {
-		"crons": ["0 2 * * *", "*/5 * * * *"],
+		"crons": ["0 2 * * *"],
 	},
 	"ratelimits": [
 		{
@@ -31,11 +32,6 @@
 				"limit": 20,
 				"period": 60,
 			},
-		},
-		{
-			"name": "AGENT_RATE_LIMIT",
-			"namespace_id": "1002",
-			"simple": { "limit": 120, "period": 60 },
 		},
 	],
 	"observability": {
@@ -48,7 +44,6 @@
 			"remote": true,
 		},
 	],
-	"ai": { "binding": "AI" },
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -72,10 +67,6 @@
 				"binding": "OUTBOUND_QUEUE",
 				"queue": "mailflare-outbound",
 			},
-			{
-				"binding": "AGENT_QUEUE",
-				"queue": "mailflare-agent",
-			},
 		],
 		"consumers": [
 			{
@@ -86,11 +77,6 @@
 			{
 				"queue": "mailflare-outbound",
 				"max_batch_size": 5,
-				"max_retries": 3,
-			},
-			{
-				"queue": "mailflare-agent",
-				"max_batch_size": 1,
 				"max_retries": 3,
 			},
 		],

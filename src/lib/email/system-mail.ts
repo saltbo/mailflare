@@ -43,7 +43,6 @@ export async function pickSystemSender(
 			localPart: mailboxes.localPart,
 			displayName: mailboxes.displayName,
 			hostname: domains.hostname,
-			role: users.role,
 			provider: domains.sendingProvider,
 			cloudflareSending: domains.sendingEnabled,
 		})
@@ -61,7 +60,7 @@ export async function pickSystemSender(
 	// Cloudflare sending only works once the zone's sending subdomain is enabled;
 	// Resend is verified per domain in Resend itself.
 	const usable = rows.filter((row) => row.provider !== "cloudflare" || row.cloudflareSending);
-	const chosen = usable.find((row) => row.role === "admin") ?? usable[0];
+	const chosen = usable[0];
 	if (!chosen) return null;
 	return { address: `${chosen.localPart}@${chosen.hostname}`, name: chosen.displayName ?? "Mailflare" };
 }

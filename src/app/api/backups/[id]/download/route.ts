@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { backups } from "@/db/schema";
-import { assertPrimaryAdmin } from "@/lib/auth/admin";
+import { assertOperator } from "@/lib/auth/admin";
 import { requireUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
 
@@ -13,7 +13,7 @@ export async function GET(
 	const env = getEnv();
 	try {
 		const user = await requireUser(env, request);
-		assertPrimaryAdmin(user);
+		assertOperator(user);
 		const { id } = await params;
 		const [backup] = await getDb(env).select().from(backups).where(eq(backups.id, id)).limit(1);
 		if (!backup?.r2Key) return NextResponse.json({ error: "Backup file not found" }, { status: 404 });

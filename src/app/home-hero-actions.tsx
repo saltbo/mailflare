@@ -11,8 +11,8 @@ export function HomeHeroActions() {
 	return (
 		<div className="mt-8 flex flex-col gap-3 sm:flex-row">
 			<Button size="lg" asChild className="rounded-full px-6">
-				<Link href={hasUser ? "/inbox" : "/setup"}>
-					{hasUser ? "Open dashboard" : "Create account"}
+				<Link href={hasUser ? "/inbox" : "/login"}>
+					{hasUser ? "Open dashboard" : "Sign in with Realmroot"}
 					<ArrowRight className="h-4 w-4" />
 				</Link>
 			</Button>

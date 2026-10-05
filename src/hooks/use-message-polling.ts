@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
 	AUTH_SESSION_CHANGED_EVENT,
-	getClientSessionToken,
 } from "@/lib/auth/client";
 import type {
 	MessageRealtimeState,
@@ -33,7 +32,6 @@ export function useMessagePolling(): MessageRealtimeState {
 		let revision: string | null = null;
 		let connected = false;
 		let leader = false;
-		let sessionToken = getClientSessionToken();
 		let stopped = false;
 
 		function dispatchMessagesChanged() {
@@ -76,12 +74,7 @@ export function useMessagePolling(): MessageRealtimeState {
 					}
 					return;
 				}
-				if (parsed.type === "agent_draft" && parsed.draftId && parsed.mailboxId) {
-					window.dispatchEvent(new CustomEvent("mailflare:agent-draft", { detail: parsed }));
-					dispatchMessagesChanged();
-					if (fromSocket) channel?.postMessage({ type: "notification", payload } satisfies RealtimeChannelMessage);
-					return;
-				}
+
 			} catch { return; }
 			const event = parseNewMessageEvent(payload);
 			if (!event) return;
@@ -99,7 +92,7 @@ export function useMessagePolling(): MessageRealtimeState {
 
 		function scheduleReconnect() {
 			setConnected(false);
-			if (stopped || !leader || !getClientSessionToken()) return;
+			if (stopped || !leader) return;
 			const delay = getReconnectDelay(reconnectAttempt);
 			reconnectAttempt += 1;
 			reconnectTimer = window.setTimeout(connect, delay);
@@ -107,7 +100,7 @@ export function useMessagePolling(): MessageRealtimeState {
 
 		function connect() {
 			clearConnectionTimers();
-			if (stopped || !leader || !getClientSessionToken()) return;
+			if (stopped || !leader) return;
 
 			socket = new WebSocket(getRealtimeWebSocketUrl());
 			socket.onopen = () => {
@@ -130,7 +123,7 @@ export function useMessagePolling(): MessageRealtimeState {
 		}
 
 		function requestLeadership() {
-			if (stopped || !getClientSessionToken()) return;
+			if (stopped) return;
 			if (!channel || !navigator.locks) {
 				leader = true;
 				connect();
@@ -138,7 +131,7 @@ export function useMessagePolling(): MessageRealtimeState {
 			}
 			lockAbort = new AbortController();
 			void navigator.locks.request("mailflare:realtime", { signal: lockAbort.signal }, async () => {
-				if (stopped || !getClientSessionToken()) return;
+				if (stopped) return;
 				await new Promise<void>((resolve) => {
 					releaseLeader = resolve;
 					leader = true;
@@ -150,7 +143,6 @@ export function useMessagePolling(): MessageRealtimeState {
 		}
 
 		function restartForSessionChange() {
-			sessionToken = getClientSessionToken();
 			if (socket) {
 				socket.onclose = null;
 				socket.close(1000, "Session changed");
@@ -190,9 +182,6 @@ export function useMessagePolling(): MessageRealtimeState {
 			if (document.visibilityState === "visible") dispatchMessagesChanged();
 		}
 
-		function onStorageChange() {
-			if (sessionToken !== getClientSessionToken()) restartForSessionChange();
-		}
 
 		if (typeof BroadcastChannel !== "undefined") {
 			channel = new BroadcastChannel("mailflare:realtime");
@@ -200,7 +189,6 @@ export function useMessagePolling(): MessageRealtimeState {
 			channel.postMessage({ type: "status_request" } satisfies RealtimeChannelMessage);
 		}
 		window.addEventListener(AUTH_SESSION_CHANGED_EVENT, restartForSessionChange);
-		window.addEventListener("storage", onStorageChange);
 		window.addEventListener("mailflare:messages-changed", onLocalMessagesChanged);
 		document.addEventListener("visibilitychange", onVisibilityChange);
 		window.addEventListener("focus", onVisibilityChange);
@@ -210,7 +198,6 @@ export function useMessagePolling(): MessageRealtimeState {
 		return () => {
 			stopped = true;
 			window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, restartForSessionChange);
-			window.removeEventListener("storage", onStorageChange);
 			window.removeEventListener("mailflare:messages-changed", onLocalMessagesChanged);
 			document.removeEventListener("visibilitychange", onVisibilityChange);
 			window.removeEventListener("focus", onVisibilityChange);

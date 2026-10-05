@@ -10,6 +10,5 @@ export type NodeRuntime = {
 	mailer: Mailer;
 	inboundQueue: InProcessQueue;
 	outboundQueue: InProcessQueue;
-	agentQueue: InProcessQueue;
 	realtime: RealtimeHubRegistry;
 };

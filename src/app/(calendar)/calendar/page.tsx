@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { DragEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { AlignLeft, CalendarPlus2, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, MoreVertical, Palette, Plus, Repeat2, Trash2, UsersRound, X } from "lucide-react";
+import { AlignLeft, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, MoreVertical, Palette, Plus, Repeat2, Trash2, UsersRound, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { mobilePrimaryActionClass } from "@/components/page-header-utils";
 import { Button } from "@/components/ui/button";
@@ -126,7 +126,7 @@ export default function CalendarPage() {
     void authFetch(`/api/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`)
       .then((response) => {
         if (!response.ok) throw new Error("Could not load calendar events.");
-        return response.json();
+        return response.json() as Promise<{ events?: CalendarEvent[] }>;
       })
       .then((data) => { if (active) setEvents(expandCalendarEvents(data.events ?? [], start, end)); })
       .catch(() => { if (active) toast.error("Could not load calendar events."); })
@@ -198,7 +198,7 @@ export default function CalendarPage() {
         setEventsVersion((version) => version + 1);
         setClosingEventEditor(true);
       } else {
-        const result = await response.json();
+        const result = await response.json() as { error?: string };
         toast.error(result.error ?? "Could not save the event. Please try again.");
       }
     } catch {
@@ -219,7 +219,7 @@ export default function CalendarPage() {
         setEventsVersion((version) => version + 1);
         setClosingEventEditor(true);
       } else {
-        const result = await response.json();
+        const result = await response.json() as { error?: string };
         toast.error(result.error ?? "Could not delete the event. Please try again.");
       }
     } catch {

@@ -1,3 +1,4 @@
+import { getEnv } from "@/lib/cloudflare";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { webhooks } from "@/db/schema";
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, { params }: WebhookRouteParams) {
 	const { id } = await params;
 	const loaded = await loadOwnedWebhook(request, id);
 	if (loaded.error) return loaded.error;
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 
 	const parsed = webhookUpdateSchema.safeParse(await request.json());
 	if (!parsed.success) {
@@ -59,7 +60,7 @@ export async function DELETE(request: Request, { params }: WebhookRouteParams) {
 	const { id } = await params;
 	const loaded = await loadOwnedWebhook(request, id);
 	if (loaded.error) return loaded.error;
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 
 	// Deliveries cascade with the webhook row.
 	await loaded.db.delete(webhooks).where(eq(webhooks.id, id));

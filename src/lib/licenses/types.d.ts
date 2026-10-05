@@ -40,6 +40,5 @@ export type LicenseDeactivationInput = {
 export type LicenseEntitlements = {
 	plan: LicensePlan;
 	canCustomizeBranding: boolean;
-	canManageAccounts: boolean;
 	canForwardEmail: boolean;
 };

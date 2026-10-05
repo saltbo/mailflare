@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { LicenseStatus } from "@/lib/licenses/types";
@@ -8,6 +9,7 @@ import { loadLicenseIndicatorStatus } from "./license-indicator-utils";
 import { LICENSE_STATUS_CHANGED_EVENT } from "@/lib/licenses/constants";
 
 export function LicenseIndicator() {
+	const user = useCurrentUser();
 	const [license, setLicense] = useState<LicenseStatus | null>(null);
 
 	useEffect(() => {
@@ -27,7 +29,7 @@ export function LicenseIndicator() {
 		};
 	}, []);
 
-	if (!license || license.active) return null;
+	if (!user?.isOperator || !license || license.active) return null;
 
 	return (
 		<Link

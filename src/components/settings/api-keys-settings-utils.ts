@@ -1,15 +1,6 @@
 import { authFetch } from "@/lib/auth/client";
 import type { ApiKeyScope } from "@/lib/api/scopes";
-import type { ManagedApiKey, McpKeyScope } from "./api-keys-settings-types";
-
-export const MCP_KEY_SCOPES: { value: McpKeyScope; label: string; description: string }[] = [
-	{ value: "mcp:read", label: "Read mail", description: "List, search, and read messages." },
-	{ value: "mcp:draft", label: "Manage drafts", description: "Create, edit, and discard drafts." },
-	{ value: "mcp:organize", label: "Organize mail", description: "Mark messages read and move them." },
-	{ value: "mcp:request-send", label: "Request send review", description: "Propose a send that you must confirm in Mailflare." },
-	{ value: "mcp:calendar-read", label: "Read calendar", description: "List, search, and inspect events and free time." },
-	{ value: "mcp:calendar-write", label: "Manage calendar", description: "Create, update, and delete events." },
-];
+import type { ManagedApiKey } from "./api-keys-settings-types";
 
 export const STANDARD_KEY_SCOPES: { value: ApiKeyScope; label: string; description: string }[] = [
 	{ value: "read", label: "Read mail", description: "Read messages through the API." },
@@ -19,7 +10,7 @@ export const STANDARD_KEY_SCOPES: { value: ApiKeyScope; label: string; descripti
 ];
 
 async function responseData(response: Response): Promise<{ error?: unknown; key?: string; apiKeys?: ManagedApiKey[] }> {
-	return response.json().catch(() => ({}));
+	return response.json().catch(() => ({})) as Promise<{ error?: unknown; key?: string; apiKeys?: ManagedApiKey[] }>;
 }
 
 export function keyPermissions(key: ManagedApiKey): string[] {
@@ -38,8 +29,8 @@ export async function loadManagedApiKeys(): Promise<ManagedApiKey[]> {
 	return data.apiKeys;
 }
 
-export async function createManagedApiKey(input: { name: string; mcpAllowed: boolean; scopes: ApiKeyScope[] | McpKeyScope[]; mailboxIds: string[] }): Promise<string> {
-	const response = await authFetch(input.mcpAllowed ? "/api/agent/mcp-keys" : "/api/api-keys", {
+export async function createManagedApiKey(input: { name: string; scopes: ApiKeyScope[]; mailboxIds: string[] }): Promise<string> {
+	const response = await authFetch("/api/api-keys", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ name: input.name, scopes: input.scopes, mailboxIds: input.mailboxIds }),

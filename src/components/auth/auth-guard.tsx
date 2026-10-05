@@ -1,88 +1,34 @@
 "use client";
-
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { authFetch } from "@/lib/auth/client";
-import type { AuthGuardProps } from "./auth-guard-types";
 import { LoadingTransition } from "@/components/loading-transition";
 import { saveUserTimeZonePreference } from "@/lib/time/client";
-
-export function AuthGuard({ children, mode = "protected", requireMailbox, requireRole, requirePrimary, allowAuthenticated }: AuthGuardProps) {
-	const pathname = usePathname();
-	const router = useRouter();
-	const [authorized, setAuthorized] = useState(mode === "public");
-
-	useEffect(() => {
-		let cancelled = false;
-
-		async function checkSession() {
-			try {
-				const cookieResponse = await fetch("/api/auth/me", {
-					cache: "no-store",
-					signal: AbortSignal.timeout(5_000),
-				});
-				const response = cookieResponse.ok || cookieResponse.status !== 401
-					? cookieResponse
-					: await authFetch("/api/auth/me", {
-						redirectOnUnauthorized: false,
-						signal: AbortSignal.timeout(5_000),
-					});
-				if (cancelled) return;
-
-				if (!response.ok) {
-					if (mode === "protected" && response.status === 401) router.replace("/login");
-					else setAuthorized(true);
-					return;
-				}
-
-				const data = (await response.json()) as { hasMailboxes?: boolean; isSetup?: boolean; user?: { id?: string; role?: string; isPrimaryAdmin?: boolean; timeZone?: string | null } };
-				if (data.user?.id) saveUserTimeZonePreference(data.user.id, data.user.timeZone ?? null);
-				if (mode === "public") {
-					if (!allowAuthenticated) router.replace("/inbox");
-					return;
-				}
-
-				if (requireMailbox && data.hasMailboxes === false && data.user?.role === "admin" && data.isSetup === false && pathname !== "/setup") {
-					router.replace("/setup");
-					return;
-				}
-
-				if (pathname === "/setup" && data.isSetup === true) {
-					router.replace("/inbox");
-					return;
-				}
-
-				if (requireRole && data.user?.role !== requireRole) {
-					router.replace("/inbox");
-					return;
-				}
-
-				if (requirePrimary && !data.user?.isPrimaryAdmin) {
-					router.replace("/admin");
-					return;
-				}
-
-				setAuthorized(true);
-			} catch {
-				if (!cancelled) setAuthorized(true);
-			}
-		}
-
-		void checkSession();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [mode, pathname, requireMailbox, requireRole, requirePrimary, allowAuthenticated, router]);
-
-	useEffect(() => {
-		const refreshTimeZone = (event: StorageEvent) => {
-			if (event.key === "mailflare-user-time-zone") window.location.reload();
-		};
-		window.addEventListener("storage", refreshTimeZone);
-		return () => window.removeEventListener("storage", refreshTimeZone);
-	}, []);
-
-	if (mode === "public") return <>{children}</>;
-	return <LoadingTransition ready={authorized}>{children}</LoadingTransition>;
+import type { AuthGuardProps } from "./auth-guard-types";
+export function AuthGuard({ children, mode = "protected", requireMailbox, requireOperator, allowAuthenticated }: AuthGuardProps) {
+ const pathname = usePathname();
+ const router = useRouter();
+ const [authorizedFor, setAuthorizedFor] = useState<string | null>(null);
+ const [errorFor, setErrorFor] = useState<string | null>(null);
+ const guardKey = [mode, pathname, requireMailbox, requireOperator, allowAuthenticated].join(":");
+ useEffect(() => {
+  const controller = new AbortController();
+  void fetch("/api/auth/me", { cache: "no-store", signal: controller.signal }).then(async (response) => {
+   if (response.status === 401) {
+    if (mode === "protected") router.replace("/login");
+    else setAuthorizedFor(guardKey);
+    return;
+   }
+   if (!response.ok) throw new Error("Could not verify the session.");
+   const data = await response.json() as { hasMailboxes: boolean; user: { id: string; isOperator: boolean; timeZone: string | null } };
+   if (controller.signal.aborted) return;
+   saveUserTimeZonePreference(data.user.id, data.user.timeZone);
+   if (mode === "public" && !allowAuthenticated) { router.replace("/inbox"); return; }
+   if (requireOperator && !data.user.isOperator) { router.replace("/inbox"); return; }
+   if (requireMailbox && !data.hasMailboxes && pathname !== "/mailboxes") { router.replace("/mailboxes"); return; }
+   setAuthorizedFor(guardKey);
+  }).catch(() => { if (!controller.signal.aborted) setErrorFor(guardKey); });
+  return () => controller.abort();
+ }, [mode, pathname, requireMailbox, requireOperator, allowAuthenticated, router, guardKey]);
+ if (errorFor === guardKey) return <p role="alert" className="p-6 text-red-600">Could not verify your session. Reload to try again.</p>;
+ return <LoadingTransition ready={authorizedFor === guardKey}>{children}</LoadingTransition>;
 }

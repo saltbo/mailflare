@@ -13,7 +13,6 @@ export type ComposeDraft = {
 	threadId?: string | null;
 	/** Files already stored on the draft, e.g. carried over by Forward. */
 	attachments?: ComposeStoredAttachment[];
-	agent?: { revision: number; origin: "chat" | "auto" | "mcp"; scheduledAt: string | null } | null;
 };
 
 export type ComposeStoredAttachment = {

@@ -22,8 +22,10 @@ export function collapseQuotedEmailHtml(html: string | null, preserveLeadingQuot
 		const content = document.createElement("div");
 		content.className = "email-quote-content";
 		introduction.parentNode?.insertBefore(details, introduction);
-		content.append(introduction, blockquote);
-		details.append(summary, content);
+		content.appendChild(introduction);
+		content.appendChild(blockquote);
+		details.appendChild(summary);
+		details.appendChild(content);
 	}
 
 	return document.body.innerHTML;

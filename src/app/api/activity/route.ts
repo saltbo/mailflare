@@ -2,7 +2,7 @@ import { desc, inArray, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db";
 import { auditLogs, users } from "@/db/schema";
-import { assertPrimaryAdmin } from "@/lib/auth/admin";
+import { assertOperator } from "@/lib/auth/admin";
 import { requireUser } from "@/lib/auth/cookies";
 import { getEnv } from "@/lib/cloudflare";
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 	const env = getEnv();
 	const admin = await requireUser(env, request);
 	try {
-		assertPrimaryAdmin(admin);
+		assertOperator(admin);
 	} catch {
 		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 	}

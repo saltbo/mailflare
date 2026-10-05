@@ -16,7 +16,6 @@ import {
 } from "./mailbox-provider-utils";
 import {
 	AUTH_SESSION_CHANGED_EVENT,
-	getClientSessionToken,
 } from "@/lib/auth/client";
 import { PROFILE_NAME_CHANGED_EVENT } from "@/lib/profile/name-client";
 import { PROFILE_AVATAR_CHANGED_EVENT } from "@/lib/profile/avatar-client";
@@ -33,7 +32,7 @@ export type MailboxOption = {
 	autoReplySubject?: string;
 	autoReplyBody?: string;
 	hasAvatar?: boolean;
-	type?: "personal" | "shared";
+	type?: "personal";
 	permission?: "read_only" | "send_as" | "send_on_behalf" | "full_access";
 	isPrimary?: boolean;
 	senderAddresses?: string[];
@@ -61,11 +60,10 @@ export function MailboxProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		let cancelled = false;
-		const sessionToken = getClientSessionToken();
 
 		fetchMailboxOptions()
 			.then((items) => {
-				if (cancelled || sessionToken !== getClientSessionToken()) return;
+				if (cancelled) return;
 				setMailboxes(items);
 
 				const storedId = localStorage.getItem(SELECTED_MAILBOX_STORAGE_KEY);
@@ -85,7 +83,7 @@ export function MailboxProvider({ children }: { children: ReactNode }) {
 			})
 			.catch(() => {})
 			.finally(() => {
-				if (!cancelled && sessionToken === getClientSessionToken()) setIsLoading(false);
+				if (!cancelled) setIsLoading(false);
 			});
 
 		return () => {

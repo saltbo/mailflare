@@ -12,8 +12,8 @@ export async function PATCH(request: Request) {
 	const env = getEnv();
 	const user = await getCurrentUser(env, request);
 	if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	if (user.role !== "admin") return NextResponse.json({ error: "Only administrators can change booking usernames." }, { status: 403 });
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!user.isOperator) return NextResponse.json({ error: "Only administrators can change booking usernames." }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const body = await request.json().catch(() => null) as BookingSettingsInput | null;
 	const username = normalizeBookingUsername(body?.username);
 	if (!username) return NextResponse.json({ error: "Use up to 64 lowercase letters, numbers, dots, underscores, plus signs, or hyphens." }, { status: 400 });

@@ -1,3 +1,4 @@
+import { getUserFromSession } from "@/lib/auth/session";
 import type { WebSocket } from "ws";
 import { getUserMailRevision } from "@/lib/realtime/revision";
 import type { RevisionPing, RevisionNotification } from "@/lib/realtime/types";
@@ -11,22 +12,22 @@ import type { RevisionPing, RevisionNotification } from "@/lib/realtime/types";
 export class RealtimeHubRegistry {
 	private readonly sockets = new Map<string, Set<WebSocket>>();
 	private env: CloudflareEnv | null = null;
+	private readonly sessionTokens = new WeakMap<WebSocket, string>();
 
 	bindEnv(env: CloudflareEnv) {
 		this.env = env;
 	}
 
-	attach(userId: string, socket: WebSocket) {
+	attach(userId: string, socket: WebSocket, sessionToken: string) {
 		const set = this.sockets.get(userId) ?? new Set();
 		set.add(socket);
+		this.sessionTokens.set(socket, sessionToken);
 		this.sockets.set(userId, set);
 		socket.on("message", (data) => {
 			const message = data.toString();
-			if (message === "ping") {
-				socket.send("pong");
-				return;
-			}
 			void (async () => {
+				if (!(await this.hasSession(userId, socket))) return;
+				if (message === "ping") { socket.send("pong"); return; }
 				let ping: RevisionPing;
 				try { ping = JSON.parse(message) as RevisionPing; } catch { return; }
 				if (ping.type !== "ping" || !this.env) return;
@@ -41,15 +42,22 @@ export class RealtimeHubRegistry {
 		});
 	}
 
-	notify(userId: string, payload: unknown) {
+	async notify(userId: string, payload: unknown) {
 		const message = JSON.stringify(payload);
 		for (const socket of this.sockets.get(userId) ?? []) {
 			try {
+				if (!(await this.hasSession(userId, socket))) continue;
 				socket.send(message);
 			} catch {
 				socket.close(1011, "Delivery failed");
 			}
 		}
+	}
+
+	private async hasSession(userId: string, socket: WebSocket) {
+		const user = this.env ? await getUserFromSession(this.env, this.sessionTokens.get(socket)) : null;
+		if (!user || user.disabled || user.id !== userId) { socket.close(1008, "Session expired"); return false; }
+		return true;
 	}
 
 	connections() {
@@ -66,7 +74,7 @@ export class RealtimeHubRegistry {
 				const request = input instanceof Request ? input : new Request(input, init);
 				const url = new URL(request.url);
 				if (url.pathname === "/notify" && request.method === "POST") {
-					notify(userId, await request.json());
+					await notify(userId, await request.json());
 					return new Response(null, { status: 204 });
 				}
 				return new Response("Not found", { status: 404 });

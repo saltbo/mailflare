@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSidebar } from "@/components/sidebar-state";
-import { useAssistantOpen } from "@/components/agent/assistant-open-state";
 import { readColumnWidth, readInitialColumnWidth, saveColumnWidth } from "@/components/column-width-preferences";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { BulkMessageSelectionPane } from "./bulk-message-selection-pane";
@@ -29,7 +28,7 @@ export function MessageSplitLayout({
 	const startWidth = useRef(listWidth);
 	const resizedWidth = useRef(listWidth);
 	const { userId, setForcedMinimal } = useSidebar();
-	const assistantOpen = useAssistantOpen();
+	const assistantOpen = false;
 	const listVisible = twoColumnReading && !assistantOpen && manualListVisible;
 	const detailPrefix = `${config.hrefPrefix}/`;
 	const selectedMessageId = pathname.startsWith(detailPrefix)

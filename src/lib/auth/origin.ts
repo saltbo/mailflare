@@ -1,9 +1,7 @@
-/** Call only after session authentication. Bearer tokens are not sent automatically by browsers. */
-export function hasValidSessionMutationOrigin(request: Request): boolean {
-	if (request.headers.get("Authorization")?.startsWith("Bearer ")) return true;
-	const fetchSite = request.headers.get("Sec-Fetch-Site");
-	if (fetchSite === "same-origin") return true;
-	if (fetchSite === "cross-site" || fetchSite === "same-site") return false;
-	const origin = request.headers.get("Origin");
-	return origin !== null && origin === new URL(request.url).origin;
+/** Cookie-authenticated writes use the configured public origin, including behind a proxy. */
+export function hasValidSessionMutationOrigin(request: Request, publicOrigin?: string): boolean {
+ const expectedOrigin = new URL(publicOrigin ?? request.url).origin;
+ const origin = request.headers.get("Origin");
+ if (origin !== null) return origin === expectedOrigin;
+ return request.headers.get("Sec-Fetch-Site") === "same-origin";
 }

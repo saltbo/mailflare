@@ -52,12 +52,11 @@ export function AccountSettings() {
 			<section className="space-y-4">
 				<div>
 					<h2 className="text-xl font-semibold text-neutral-900">Account details</h2>
-					<p className="mt-1 text-sm text-neutral-500">Manage your identity, recovery options, and email preferences.</p>
+					<p className="mt-1 text-sm text-neutral-500">Manage your profile and email preferences.</p>
 				</div>
 				<div className="space-y-1 overflow-hidden rounded-3xl">
 					<ProfileForm
 						initialName={user.name}
-						initialResetEmail={user.resetEmail ?? ""}
 						email={user.email}
 					/>
 

@@ -36,7 +36,7 @@ export async function PATCH(request: Request) {
 	});
 	await db
 		.update(users)
-		.set({ resetEmail: parsed.resetEmail, forwardingEmail })
+		.set({ forwardingEmail })
 		.where(eq(users.id, user.id));
 
 	return NextResponse.json({
@@ -44,7 +44,6 @@ export async function PATCH(request: Request) {
 			id: user.id,
 			email: user.email,
 			name: parsed.name,
-			resetEmail: parsed.resetEmail,
 			forwardingEmail,
 			canForwardEmail,
 		},

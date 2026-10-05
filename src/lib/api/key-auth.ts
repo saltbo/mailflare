@@ -1,12 +1,13 @@
+import { isOperatorSubject } from "@/lib/auth/config";
 import { and, eq, lt, or, isNull } from "drizzle-orm";
 import { getDb } from "@/db";
-import { apiKeys, mcpKeyMailboxes, users } from "@/db/schema";
+import { apiKeys, apiKeyMailboxes, users } from "@/db/schema";
 import { parseScopes, verifyApiKey } from "@/lib/api-keys";
 import type { ApiAuthResult } from "@/lib/api/key-auth-types";
-import { ADMIN_API_KEY_SCOPES } from "@/lib/api/scopes";
+import { API_KEY_SCOPES } from "@/lib/api/scopes";
 
 const LAST_USED_WRITE_INTERVAL_MS = 60_000;
-const ADMIN_SCOPES = new Set<string>(ADMIN_API_KEY_SCOPES);
+const SUPPORTED_SCOPES = new Set<string>(API_KEY_SCOPES);
 
 /**
  * Resolve an API key to its user and scopes. Framework-free so it can run in
@@ -32,10 +33,11 @@ export async function authenticateApiKeyValue(env: CloudflareEnv, key: string): 
 			.where(and(eq(apiKeys.id, candidate.id), or(isNull(apiKeys.lastUsedAt), lt(apiKeys.lastUsedAt, stale))));
 
 		const scopes = parseScopes(candidate.scopes);
+		if (!scopes.length || scopes.some((scope) => !SUPPORTED_SCOPES.has(scope))) continue;
 		const allowed = candidate.mailboxScopeEnabled
-			? await db.select({ mailboxId: mcpKeyMailboxes.mailboxId }).from(mcpKeyMailboxes).where(eq(mcpKeyMailboxes.keyId, candidate.id))
+			? await db.select({ mailboxId: apiKeyMailboxes.mailboxId }).from(apiKeyMailboxes).where(eq(apiKeyMailboxes.keyId, candidate.id))
 			: null;
-		return { userId: user.id, email: user.email, scopes: scopes.some((scope) => ADMIN_SCOPES.has(scope)) ? scopes.filter((scope) => ADMIN_SCOPES.has(scope)) : scopes, mailboxIds: allowed?.map((row) => row.mailboxId) ?? null, user };
+		return { userId: user.id, email: user.email, scopes, mailboxIds: allowed?.map((row) => row.mailboxId) ?? null, user: { ...user, isOperator: isOperatorSubject(env, user.oidcIssuer, user.oidcSubject) } };
 	}
 	return null;
 }

@@ -29,7 +29,7 @@ export async function listDomainRules(db: AppDatabase, domainId: string) {
 
 export async function getManagedDomainMailbox(
 	db: AppDatabase,
-	user: Pick<SessionUser, "id" | "email" | "role">,
+	user: Pick<SessionUser, "id" | "email">,
 	mailboxId: string,
 	domainId: string,
 ) {
@@ -40,7 +40,7 @@ export async function getManagedDomainMailbox(
 
 export async function listManagedDomainMailboxes(
 	db: AppDatabase,
-	user: Pick<SessionUser, "id" | "email" | "role">,
+	user: Pick<SessionUser, "id" | "email">,
 	domainId: string,
 ) {
 	const accessible = await listAccessibleMailboxes(db, user);
@@ -52,11 +52,11 @@ export async function listManagedDomainMailboxes(
 
 export async function getAdminDomain(
 	db: AppDatabase,
-	user: Pick<SessionUser, "id" | "role" | "canManageMailboxes" | "createdByUserId">,
+	user: Pick<SessionUser, "id" | "isOperator">,
 	domainId: string,
 ) {
-	if (user.role !== "admin") return null;
-	const ownerId = user.canManageMailboxes && user.createdByUserId ? user.createdByUserId : user.id;
+	if (!user.isOperator) return null;
+	const ownerId = user.id;
 	const [domain] = await db
 		.select()
 		.from(domains)
@@ -90,7 +90,7 @@ export async function assertAdminRuleMailbox(db: AppDatabase, mailboxId: string,
 /** A rule can deliver only to an inbox that the caller can fully manage. */
 export async function assertRuleMailbox(
 	db: AppDatabase,
-	user: Pick<SessionUser, "id" | "email" | "role">,
+	user: Pick<SessionUser, "id" | "email">,
 	mailboxId: string,
 	domainId: string,
 ): Promise<boolean> {

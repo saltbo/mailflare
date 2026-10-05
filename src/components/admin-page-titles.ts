@@ -6,13 +6,9 @@ export const adminPageTitles: Record<string, string> = {
 	"/domains": "Domains",
 	"/routing": "Routing",
 	"/webhooks": "Webhooks",
-	"/api-keys": "Admin API keys",
 	"/general": "General",
-	"/agent": "Agent",
-	"/accounts": "Accounts",
 	"/activity": "Activity",
 	"/backups": "Backups",
 	"/branding": "Branding",
 	"/licenses": "Licenses",
-	"/ai-usage": "AI usage",
 };

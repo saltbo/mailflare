@@ -1,3 +1,5 @@
+> This edition uses Realmroot OIDC and a fresh database. Follow [Realmroot setup](realmroot.md) for identity configuration and self-service personal mailboxes. Legacy first-admin/password/shared-mailbox instructions below do not apply.
+
 # Troubleshooting
 
 ## Cloudflare error 9109: Invalid access token

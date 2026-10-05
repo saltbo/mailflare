@@ -1,10 +1,12 @@
+import { isOperatorSubject } from "./config";
+import type { SessionUser } from "./types";
 import { and, eq, gt, ne } from "drizzle-orm";
 import { newId } from "@/lib/ids";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
 
 export const SESSION_COOKIE = "ep_session";
-const SESSION_DAYS = 30;
+const SESSION_HOURS = 8;
 
 export function generateSessionToken(): string {
 	return newId("sess");
@@ -21,7 +23,7 @@ export async function createSession(env: CloudflareEnv, userId: string): Promise
 	const db = getDb(env);
 	const token = generateSessionToken();
 	const tokenHash = await hashSessionToken(token);
-	const expiresAt = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+	const expiresAt = new Date(Date.now() + SESSION_HOURS * 3_600_000);
 
 	await db.insert(sessions).values({
 		id: newId(),
@@ -36,7 +38,7 @@ export async function createSession(env: CloudflareEnv, userId: string): Promise
 export async function getUserFromSession(
 	env: CloudflareEnv,
 	token: string | undefined,
-): Promise<typeof users.$inferSelect | null> {
+): Promise<SessionUser | null> {
 	if (!token) return null;
 	const db = getDb(env);
 	const tokenHash = await hashSessionToken(token);
@@ -47,7 +49,7 @@ export async function getUserFromSession(
 		.limit(1);
 	if (!session) return null;
 	const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
-	return user ?? null;
+	return user ? { ...user, isOperator: isOperatorSubject(env, user.oidcIssuer, user.oidcSubject) } : null;
 }
 
 export async function deleteSession(env: CloudflareEnv, token: string): Promise<void> {
@@ -58,7 +60,7 @@ export async function deleteSession(env: CloudflareEnv, token: string): Promise<
 
 /**
  * Sign the user out everywhere, optionally keeping the session that made the
- * request. Used after a password change or reset and when MFA is switched on.
+ * request. Available for explicit application-session revocation.
  */
 export async function deleteUserSessions(env: CloudflareEnv, userId: string, keepToken?: string): Promise<void> {
 	const db = getDb(env);

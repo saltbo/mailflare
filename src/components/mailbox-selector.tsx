@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, Check, ChevronDown, Inbox, LogOut, Settings, ShieldCheck, UserPlus, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Inbox, LogOut, Settings, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSelectedMailbox } from "@/components/mailbox-provider";
 import { ProgressiveAvatarImage } from "@/components/progressive-avatar-image";
@@ -11,7 +11,6 @@ import { useMessageCounts } from "@/hooks/use-message-counts";
 import { authFetch } from "@/lib/auth/client";
 import { getAvatarColorStyle } from "@/lib/avatar-colors";
 import { logoutClientSession } from "@/lib/auth/logout";
-import { fetchBrowserAccounts, switchBrowserAccount, type BrowserAccount } from "@/lib/auth/accounts-client";
 import {
 	PROFILE_AVATAR_CHANGED_EVENT,
 	getProfileAvatarUrl,
@@ -21,7 +20,6 @@ import type { ProfileAvatarChangedDetail, ProfileNameChangedDetail } from "@/lib
 import { MAILBOX_AVATAR_CHANGED_EVENT } from "@/lib/mailboxes/avatar-client";
 import type { MailboxAvatarChangedDetail } from "@/lib/mailboxes/avatar-client-types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip } from "@/components/ui/tooltip";
 import type {
 	AccountAvatarProps,
 	MailboxAccountRowProps,
@@ -93,13 +91,6 @@ function MailboxAccountRow({ mailbox, unread, avatarUrl, onSelect }: MailboxAcco
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-1.5">
 					<p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
-					{mailbox.type === "shared" && (
-						<Tooltip label="Shared inbox">
-							<span title="Shared inbox" aria-label="Shared inbox" className="shrink-0 text-blue-600">
-								<UsersRound className="h-3.5 w-3.5" />
-							</span>
-						</Tooltip>
-					)}
 				</div>
 				<p className="truncate text-xs text-neutral-500">{getMailboxAddress(mailbox)}</p>
 			</div>
@@ -122,19 +113,6 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 	const [avatarUrl, setAvatarUrl] = useState("/api/profile/avatar");
 	const [mailboxAvatarUrls, setMailboxAvatarUrls] = useState<Record<string, string>>({});
 	const [inboxesOpen, setInboxesOpen] = useState(false);
-	const [browserAccounts, setBrowserAccounts] = useState<BrowserAccount[]>([]);
-
-	useEffect(() => {
-		if (!open) return;
-		let active = true;
-		void fetchBrowserAccounts().then((accounts) => {
-			if (active) setBrowserAccounts(accounts);
-		});
-		return () => {
-			active = false;
-		};
-	}, [open]);
-	const otherAccounts = browserAccounts.filter((account) => !account.active && account.userId !== user?.id);
 	const ref = useRef<HTMLDivElement>(null);
 	const { counts } = useMessageCounts(null, open);
 
@@ -228,16 +206,6 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 		router.refresh();
 	}
 
-	async function switchAccount(userId: string) {
-		const error = await switchBrowserAccount(userId);
-		setOpen(false);
-		if (error) {
-			router.push("/login?add=1");
-			return;
-		}
-		router.replace("/inbox");
-		router.refresh();
-	}
 
 	return (
 		<div ref={ref} className="relative">
@@ -276,13 +244,6 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 							<div className="min-w-0 flex-1">
 								<div className="flex items-center gap-2">
 									<p className="truncate text-lg font-semibold text-neutral-900">{selectedName}</p>
-									{selectedMailbox?.type === "shared" && (
-										<Tooltip label="Shared inbox">
-											<span title="Shared inbox" aria-label="Shared inbox" className="shrink-0 text-blue-600">
-												<UsersRound className="h-4 w-4" />
-											</span>
-										</Tooltip>
-									)}
 								</div>
 								<p className="truncate text-sm text-neutral-500">
 									{selectedEmail}
@@ -345,35 +306,8 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 						)}
 					</div>
 
-					{otherAccounts.length > 0 && (
-						<div className="mt-2 rounded-[22px] bg-white/55 p-1">
-							<p className="px-4 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-								Other accounts
-							</p>
-							{otherAccounts.map((account) => (
-								<button
-									key={account.userId}
-									type="button"
-									onClick={() => void switchAccount(account.userId)}
-									className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white"
-								>
-									<AccountAvatar
-										name={account.name}
-										colorSeed={account.email}
-										hasAvatar={account.hasAvatar}
-										avatarUrl={`/api/auth/accounts/${account.userId}/avatar`}
-									/>
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-sm font-semibold text-neutral-900">{account.name}</p>
-										<p className="truncate text-xs text-neutral-500">{account.email}</p>
-									</div>
-								</button>
-							))}
-						</div>
-					)}
-
 					<div className="mt-2 overflow-hidden rounded-[22px] bg-white">
-						{user?.role === "admin" && (
+						{user?.isOperator && (
 							<Link
 								href="/admin"
 								onClick={() => setOpen(false)}
@@ -384,14 +318,7 @@ export function MailboxSelector({ initialUser }: MailboxSelectorProps = {}) {
 								{adminActive && <Check className="ml-auto h-4 w-4 text-blue-600" />}
 							</Link>
 						)}
-						<Link
-							href="/login?add=1"
-							onClick={() => setOpen(false)}
-							className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-neutral-800 hover:bg-[#f2f6fc]"
-						>
-							<UserPlus size={18} className="text-neutral-600" />
-							Add another account
-						</Link>
+                        <Link href="/mailboxes" onClick={() => setOpen(false)} className="flex items-center gap-3 px-5 py-4 text-sm font-medium">Create mailbox</Link>
 						<button
 							type="button"
 							onClick={logout}

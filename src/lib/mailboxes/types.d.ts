@@ -1,8 +1,8 @@
 import type { mailboxes } from "@/db/schema";
 
-export type MailboxPermission = "read_only" | "send_as" | "send_on_behalf" | "full_access";
+export type MailboxPermission = "full_access";
 
-export type MailboxType = "personal" | "shared";
+export type MailboxType = "personal";
 
 export type MailboxAccessLevel = {
 	mailbox: typeof mailboxes.$inferSelect;

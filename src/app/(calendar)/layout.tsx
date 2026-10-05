@@ -1,11 +1,9 @@
 "use client";
+import { ChevronDown } from "lucide-react";
+import clsx from "clsx";
 
-import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, Sparkles } from "lucide-react";
-import { AgentPanel } from "@/components/agent/agent-panel";
-import { AssistantOpenContext } from "@/components/agent/assistant-open-state";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { ComposeProvider } from "@/components/compose/compose-context";
 import { FloatingComposer } from "@/components/compose/floating-composer";
@@ -17,26 +15,11 @@ import { SidebarAside, MobileMenuButton } from "@/components/sidebar-aside";
 import { SidebarHeader } from "@/components/sidebar-header";
 import { SidebarProvider } from "@/components/sidebar-state";
 import { ShortcutsProvider } from "@/components/shortcuts";
-import { Button } from "@/components/ui/button";
-import clsx from "clsx";
 import { CalendarMobileUpcoming } from "./calendar-mobile-upcoming";
-import { useDashboardState } from "../(dashboard)/dashboard-state";
-import { useAssistantAvailability } from "../(dashboard)/use-assistant-availability";
 
 export default function CalendarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { assistantOpen, setAssistantOpen, assistantFullSize, setAssistantFullSize } = useDashboardState();
-  const assistantEnabled = useAssistantAvailability();
-  const assistantVisible = assistantEnabled === true && assistantOpen;
-
-  useEffect(() => {
-    if (assistantEnabled === false && (assistantOpen || assistantFullSize)) {
-      setAssistantOpen(false);
-      setAssistantFullSize(false);
-    }
-  }, [assistantEnabled, assistantOpen, assistantFullSize, setAssistantOpen, setAssistantFullSize]);
-
   return (
     <AuthGuard>
       <SidebarProvider mobileOverlay>
@@ -59,18 +42,12 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
                       <div id="calendar-header-slot" className="flex min-w-0 flex-1 items-center md:min-w-max max-md:order-last max-md:basis-full max-md:pl-3 max-md:empty:hidden" />
                     </div>
                     <LicenseIndicator />
-                    {assistantEnabled && <Button type="button" variant="ghost" size="sm" className={assistantOpen ? "bg-blue-50 text-blue-700" : "text-neutral-600"} onClick={() => { setAssistantOpen((current) => !current); setAssistantFullSize(false); }} aria-label={assistantOpen ? "Close email assistant" : "Open email assistant"} aria-expanded={assistantOpen} aria-controls="email-assistant-panel"><Sparkles className="h-5 w-5" /></Button>}
                     <MailboxSelector />
                   </header>
                   <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-                    <AssistantOpenContext.Provider value={assistantVisible}>
-                      <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-[#f6f8fc] overscroll-contain scrollbar-gutter-stable" aria-hidden={assistantVisible && assistantFullSize} inert={assistantVisible && assistantFullSize}>
+                      <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-[#f6f8fc] overscroll-contain scrollbar-gutter-stable">
                         <div key={pathname} className="page-transition-enter h-full min-h-0">{children}</div>
                       </main>
-                    </AssistantOpenContext.Provider>
-                    <aside className={clsx(assistantFullSize ? "pl-0" : "pl-4", "min-h-0 min-w-0 shrink-0 overflow-hidden pb-2 pr-2 max-md:p-0 transition-[width] duration-300 ease-in-out motion-reduce:transition-none", assistantVisible ? "" : "opacity-0")} style={{ width: assistantVisible ? assistantFullSize ? "100%" : "min(390px, 100%)" : "0px" }} aria-hidden={!assistantVisible} inert={!assistantVisible}>
-                      {assistantEnabled && <AgentPanel open={assistantVisible} fullSize={assistantFullSize} onToggleFullSize={() => setAssistantFullSize((current) => !current)} onClose={() => { setAssistantOpen(false); setAssistantFullSize(false); }} />}
-                    </aside>
                   </div>
                 </div>
                 <FloatingComposer />

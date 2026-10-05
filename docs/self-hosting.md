@@ -1,3 +1,5 @@
+> This edition uses Realmroot OIDC and a fresh database. Follow [Realmroot setup](realmroot.md) for identity configuration and self-service personal mailboxes. Legacy first-admin/password/shared-mailbox instructions below do not apply.
+
 # Self-hosting Mailflare (Docker)
 
 Mailflare can run as a single container on any host instead of Cloudflare
@@ -13,7 +15,7 @@ cp .env.docker.example .env.docker      # edit: how to receive and send mail
 docker compose up -d --build
 ```
 
-Open `http://your-host:3000/setup`, create the admin account and add your
+Open `http://your-host:3000/login`, sign in with Realmroot and add your
 domain. All data lives in the `mailflare-data` volume (`/data` in the
 container): the SQLite database, raw messages, attachments and backups.
 

@@ -1,13 +1,11 @@
 interface CloudflareEnv {
+	OIDC_CLIENT_ID?: string;
+	OIDC_CLIENT_SECRET?: string;
+	OIDC_OPERATOR_SUBJECTS?: string;
 	DB: D1Database;
 	EMAIL: SendEmail;
 	BUCKET: R2Bucket;
 	INBOUND_QUEUE: Queue<import("./src/lib/email/inbound").InboundQueueMessage>;
-	AGENT_QUEUE?: Queue<{ kind: "agent.draft"; jobId: string }>;
-	AI?: Ai;
-	AI_MODEL?: string;
-	AI_BASE_URL?: string;
-	AI_API_KEY?: string;
 	// The outbound queue also carries webhook retries so that scheduled redelivery needs no extra binding.
 	OUTBOUND_QUEUE: Queue<
 		| import("./src/lib/email/send").OutboundQueueMessage
@@ -20,11 +18,9 @@ interface CloudflareEnv {
 		import("./src/lib/realtime/hub").RealtimeHub
 	>;
 	LOGIN_RATE_LIMIT?: RateLimit;
-	AGENT_RATE_LIMIT?: RateLimit;
 	CF_TOKEN?: string;
 	CF_API_KEY?: string;
 	CF_EMAIL?: string;
-	TURNSTILE_SECRET_KEY?: string;
 	GITHUB_UPDATE_TOKEN?: string;
 	GITHUB_UPDATE_REF?: string;
 	GITHUB_UPDATE_REPO?: string;
@@ -35,5 +31,4 @@ interface CloudflareEnv {
 	/** Cloudflare account id, needed for the Email Sending REST API off Workers. */
 	CF_ACCOUNT_ID?: string;
 	/** Public origin of this install (https://mail.example.com) when it sits behind a proxy. */
-	APP_URL?: string;
 }

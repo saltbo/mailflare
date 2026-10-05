@@ -65,6 +65,6 @@ export function getHomeActions(isLoggedIn: boolean): HomeAction[] {
 
 	return [
 		{ href: "/login", label: "Log in", variant: "outline" },
-		{ href: "/setup", label: "Create account", variant: "default" },
+		{ href: "/login", label: "Sign in with Realmroot", variant: "default" },
 	];
 }

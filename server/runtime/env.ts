@@ -36,7 +36,6 @@ export function createNodeRuntime(): NodeRuntime {
 	const mailer = openMailer(mailerConfig());
 	const inboundQueue = openQueue("mailflare-inbound");
 	const outboundQueue = openQueue("mailflare-outbound");
-	const agentQueue = openQueue("mailflare-agent");
 	const realtime = new RealtimeHubRegistry();
 	const publicDir = resolve(optional("PUBLIC_DIR") ?? "./public");
 
@@ -46,25 +45,24 @@ export function createNodeRuntime(): NodeRuntime {
 		EMAIL: mailer,
 		INBOUND_QUEUE: inboundQueue,
 		OUTBOUND_QUEUE: outboundQueue,
-		AGENT_QUEUE: agentQueue,
-		AI_MODEL: optional("AI_MODEL"),
-		AI_BASE_URL: optional("AI_BASE_URL"),
-		AI_API_KEY: optional("AI_API_KEY"),
 		REALTIME: realtime.namespace(),
 		ASSETS: openAssets(publicDir),
 		IMAGES: undefined as unknown as CloudflareEnv["IMAGES"],
 		WORKER_SELF_REFERENCE: undefined as unknown as CloudflareEnv["WORKER_SELF_REFERENCE"],
 		LOGIN_RATE_LIMIT: openRateLimiter(20, 60),
-		AGENT_RATE_LIMIT: openRateLimiter(120, 60),
 		CF_TOKEN: optional("CF_TOKEN"),
 		CF_API_KEY: optional("CF_API_KEY"),
 		CF_EMAIL: optional("CF_EMAIL"),
-		TURNSTILE_SECRET_KEY: optional("TURNSTILE_SECRET_KEY"),
 		GITHUB_UPDATE_TOKEN: optional("GITHUB_UPDATE_TOKEN"),
 		GITHUB_UPDATE_REF: optional("GITHUB_UPDATE_REF"),
 		GITHUB_UPDATE_REPO: optional("GITHUB_UPDATE_REPO"),
 		// Marks the runtime for the few places that must behave differently.
 		MAILFLARE_RUNTIME: "node",
+		OIDC_ISSUER: optional("OIDC_ISSUER"),
+		OIDC_CLIENT_ID: optional("OIDC_CLIENT_ID"),
+		OIDC_CLIENT_SECRET: optional("OIDC_CLIENT_SECRET"),
+		OIDC_OPERATOR_SUBJECTS: optional("OIDC_OPERATOR_SUBJECTS"),
+		MAILBOX_DOMAIN: optional("MAILBOX_DOMAIN"),
 		APP_URL: optional("APP_URL")?.replace(/\/$/, ""),
 		INBOUND_WEBHOOK_SECRET: optional("INBOUND_WEBHOOK_SECRET"),
 	} as unknown as CloudflareEnv;
@@ -77,7 +75,6 @@ export function createNodeRuntime(): NodeRuntime {
 		mailer: mailer as unknown as Mailer,
 		inboundQueue: inboundQueue as unknown as InProcessQueue,
 		outboundQueue: outboundQueue as unknown as InProcessQueue,
-		agentQueue: agentQueue as unknown as InProcessQueue,
 		realtime,
 	};
 }

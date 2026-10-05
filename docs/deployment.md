@@ -1,3 +1,5 @@
+> This edition uses Realmroot OIDC and a fresh database. Follow [Realmroot setup](realmroot.md) for identity configuration and self-service personal mailboxes. Legacy first-admin/password/shared-mailbox instructions below do not apply.
+
 # Deployment and configuration
 
 This guide covers Cloudflare deployment, runtime configuration, database backups, and application updates.
@@ -7,7 +9,7 @@ This guide covers Cloudflare deployment, runtime configuration, database backups
 Set up Mailflare in three steps:
 
 1. **Deploy the app:** use the Deploy to Cloudflare button, set the app name to `mailflare`, and provide the required `CF_TOKEN`.
-2. **Complete setup:** open the deployed app and follow `/setup` to check the installation and create the first admin account.
+2. **Complete setup:** open the deployed app and follow `/login` to check the installation and sign in with Realmroot.
 3. **Connect your domain:** add a domain managed by the same Cloudflare account and choose which service receives its mail. Mailflare configures email routing and, when available and selected, email sending before helping you create the first mailbox. Resend and Amazon SES are alternatives to Cloudflare for receiving and sending; see [Sending and receiving providers](providers.md).
 
 
@@ -46,7 +48,7 @@ Paste only the token secret into the `CF_TOKEN` field in step 2. Do not include 
 ## Step 3: Complete mailflare setup
 
 1. Open the URL of the deployed `mailflare` Worker.
-2. Go to `/setup` if Mailflare does not take you there automatically.
+2. Go to `/login` if Mailflare does not take you there automatically.
 3. Let Mailflare check the required Cloudflare configuration and initialize the empty D1 database.
 4. Create the first admin account when prompted.
 

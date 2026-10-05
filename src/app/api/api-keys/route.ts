@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getEnv } from "@/lib/cloudflare";
 import { getDb } from "@/db";
-import { agentSendApprovals, apiKeys, mcpKeyMailboxes } from "@/db/schema";
+import { apiKeys, apiKeyMailboxes } from "@/db/schema";
 import { requireUser } from "@/lib/auth/cookies";
 import { generateApiKey, parseScopes, scopesToJson } from "@/lib/api-keys";
 import { API_KEY_SCOPES } from "@/lib/api/scopes";
@@ -35,14 +35,14 @@ export async function GET(request: Request) {
 		.from(apiKeys)
 		.where(eq(apiKeys.userId, user.id));
 	const keyIds = rows.map((row) => row.id);
-	const allowed = keyIds.length ? await db.select().from(mcpKeyMailboxes).where(inArray(mcpKeyMailboxes.keyId, keyIds)) : [];
+	const allowed = keyIds.length ? await db.select().from(apiKeyMailboxes).where(inArray(apiKeyMailboxes.keyId, keyIds)) : [];
 	return NextResponse.json({ apiKeys: rows.filter((row) => !parseScopes(row.scopes).some((scope) => ["domains", "accounts", "mailboxes"].includes(scope))).map((row) => ({ ...row, mailboxIds: allowed.filter((item) => item.keyId === row.id).map((item) => item.mailboxId) })) });
 }
 
 export async function POST(request: Request) {
 	const env = getEnv();
 	const user = await requireUser(env, request);
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const parsed = createKeySchema.safeParse(await request.json().catch(() => null));
 	if (!parsed.success) {
 		return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 		scopes: scopesToJson([...new Set(parsed.data.scopes)]),
 		mailboxScopeEnabled: true,
 	});
-	if (mailboxIds.length) await db.insert(mcpKeyMailboxes).values(mailboxIds.map((mailboxId) => ({ keyId: id, mailboxId })));
+	if (mailboxIds.length) await db.insert(apiKeyMailboxes).values(mailboxIds.map((mailboxId) => ({ keyId: id, mailboxId })));
 
 	return NextResponse.json({ id, name: parsed.data.name, prefix, key: fullKey, mailboxIds });
 }
@@ -71,14 +71,13 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
 	const env = getEnv();
 	const user = await requireUser(env, request);
-	if (!hasValidSessionMutationOrigin(request)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+	if (!hasValidSessionMutationOrigin(request, getEnv().APP_URL)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
 	const id = new URL(request.url).searchParams.get("id");
 	if (!id) return NextResponse.json({ error: "Key required" }, { status: 400 });
 	const db = getDb(env);
 	const [key] = await db.select({ id: apiKeys.id, scopes: apiKeys.scopes }).from(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, user.id))).limit(1);
 	if (!key) return NextResponse.json({ error: "Key not found" }, { status: 404 });
 	if (parseScopes(key.scopes).some((scope) => ["domains", "accounts", "mailboxes"].includes(scope))) return NextResponse.json({ error: "Manage this key in Admin API keys" }, { status: 403 });
-	await db.update(agentSendApprovals).set({ status: "cancelled" }).where(and(eq(agentSendApprovals.requestKeyId, id), eq(agentSendApprovals.status, "pending")));
 	await db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, user.id)));
 	return NextResponse.json({ ok: true });
 }

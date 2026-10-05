@@ -17,7 +17,6 @@ export function isAdminPath(pathname: string): boolean {
 		pathname === "/admin" ||
 		pathname.startsWith("/mailboxes") ||
 		pathname.startsWith("/domains") ||
-		pathname.startsWith("/api-keys") ||
 		pathname.startsWith("/webhooks") ||
 		pathname.startsWith("/activity") ||
 		pathname.startsWith("/backups")
